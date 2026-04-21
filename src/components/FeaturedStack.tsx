@@ -2,37 +2,18 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import JoinButton from './JoinButton';
+import { ALL_EVENTS } from '../data/events';
 
-const EVENTS = [
-  {
-    id: 1,
-    title: 'ดนตรีในสวน',
-    date: '1 April 2026',
-    location: '@Lumpini park',
-    image: 'https://picsum.photos/seed/park-concert/800/1000',
-  },
-  {
-    id: 2,
-    title: 'Art Workshop',
-    date: '5 April 2026',
-    location: '@BACC',
-    image: 'https://picsum.photos/seed/art/800/1000',
-  },
-  {
-    id: 3,
-    title: 'Gym Session',
-    date: '8 April 2026',
-    location: '@Fitness First',
-    image: 'https://picsum.photos/seed/gym/800/1000',
-  },
-];
+const FEATURED_IDS = [1, 2, 3];
+const FEATURED_EVENTS = ALL_EVENTS.filter(e => FEATURED_IDS.includes(e.id as number));
 
 interface FeaturedStackProps {
-  onEventClick: (event: typeof EVENTS[0], joined?: boolean) => void;
+  onEventClick: (event: any, joined?: boolean) => void;
+  onSeeMore: () => void;
 }
 
-export default function FeaturedStack({ onEventClick }: FeaturedStackProps) {
-  const [cards, setCards] = useState(EVENTS);
+export default function FeaturedStack({ onEventClick, onSeeMore }: FeaturedStackProps) {
+  const [cards, setCards] = useState(FEATURED_EVENTS);
 
   const shuffle = () => {
     setCards((prev) => {
@@ -43,11 +24,11 @@ export default function FeaturedStack({ onEventClick }: FeaturedStackProps) {
     });
   };
 
-  const handleCardClick = (event: typeof EVENTS[0]) => {
+  const handleCardClick = (event: any) => {
     onEventClick(event, false);
   };
 
-  const handleJoinStateChange = (event: typeof EVENTS[0], isJoined: boolean) => {
+  const handleJoinStateChange = (event: any, isJoined: boolean) => {
     if (isJoined) {
       // Small delay to let the animation finish before navigating
       setTimeout(() => {
@@ -58,10 +39,13 @@ export default function FeaturedStack({ onEventClick }: FeaturedStackProps) {
 
   return (
     <section className="px-6 py-4">
-      <div className="flex items-center justify-between mb-4">
+      <button 
+        onClick={onSeeMore}
+        className="flex items-center justify-between w-full mb-4 group active:scale-95 transition-transform"
+      >
         <h2 className="text-2xl font-bold text-blue-600">Eye-catching!</h2>
-        <ArrowRight className="text-blue-600 w-6 h-6" />
-      </div>
+        <ArrowRight className="text-blue-600 w-6 h-6 group-hover:translate-x-1 transition-transform" />
+      </button>
 
       <div className="relative h-[450px] w-full flex items-center justify-center perspective-1000">
         <AnimatePresence mode="popLayout">

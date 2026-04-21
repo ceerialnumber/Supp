@@ -5,14 +5,16 @@ import { motion } from 'motion/react';
 
 interface HomePageProps {
   onEventClick: (event: any, joined?: boolean) => void;
+  onSeeMore: () => void;
+  onSnapshotsClick: () => void;
 }
 
-export default function HomePage({ onEventClick }: HomePageProps) {
+export default function HomePage({ onEventClick, onSeeMore, onSnapshotsClick }: HomePageProps) {
   return (
-    <>
-      <FeaturedStack onEventClick={onEventClick} />
-      <Snapshots />
+    <div className="max-w-6xl mx-auto pb-24">
+      <FeaturedStack onEventClick={onEventClick} onSeeMore={onSeeMore} />
+      <Snapshots onHeaderClick={onSnapshotsClick} />
       <StatsBar />
-    </>
+    </div>
   );
 }

@@ -1,56 +1,87 @@
-import { useState, useRef, PointerEvent, MouseEvent } from 'react';
+import { useState, useRef, PointerEvent, MouseEvent, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { motion, useAnimation } from 'motion/react';
 import Logo from './Logo';
+import { useJoin } from '../context/JoinContext';
 
 interface JoinButtonProps {
   id: string | number;
   size?: 'sm' | 'md' | 'lg';
+  variant?: 'circle' | 'full';
   className?: string;
-  initialJoined?: boolean;
   onStateChange?: (isJoined: boolean) => void;
 }
 
 export default function JoinButton({ 
   id, 
   size = 'md', 
+  variant = 'circle',
   className = '',
-  initialJoined = false,
   onStateChange
 }: JoinButtonProps) {
-  const [isJoined, setIsJoined] = useState(initialJoined);
+  const { isEventJoined, joinEvent, unjoinEvent } = useJoin();
+  const isJoinedInContext = isEventJoined(id);
+  
+  const [isJoined, setIsJoined] = useState(isJoinedInContext);
   const [isPressing, setIsPressing] = useState(false);
   const justJoinedRef = useRef(false); // Flag to prevent immediate unjoin on release
   const controls = useAnimation();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize controls based on initialJoined
-  useState(() => {
-    if (initialJoined) {
-      controls.set({ scale: 2 });
-    }
-  });
+  // Sync internal state with context when context changes (e.g. from another button)
+  useEffect(() => {
+    setIsJoined(isJoinedInContext);
+  }, [isJoinedInContext]);
 
-  const PRESS_DURATION = 800; // 0.8 seconds
+  // Initialize controls based on isJoined
+  useEffect(() => {
+    if (isJoined) {
+      if (variant === 'circle') {
+        controls.set({ scale: 2 });
+      } else {
+        controls.set({ width: '100%' });
+      }
+    } else {
+      if (variant === 'circle') {
+        controls.set({ scale: 0 });
+      } else {
+        controls.set({ width: '0%' });
+      }
+    }
+  }, [controls, isJoined, variant]);
+
+  const PRESS_DURATION = 600; 
 
   const startPress = (e: PointerEvent) => {
     e.stopPropagation();
-    if (isJoined) return; // Only hold to join
+    if (isJoined) return; 
     
     setIsPressing(true);
     justJoinedRef.current = false;
     
-    controls.start({
-      scale: 2,
-      transition: { duration: PRESS_DURATION / 1000, ease: "linear" }
-    });
+    if (variant === 'circle') {
+      controls.start({
+        scale: 2,
+        transition: { duration: PRESS_DURATION / 1000, ease: "linear" }
+      });
+    } else {
+      controls.start({
+        width: '100%',
+        transition: { duration: PRESS_DURATION / 1000, ease: "linear" }
+      });
+    }
     
     timerRef.current = setTimeout(() => {
+      joinEvent(id);
       setIsJoined(true);
       onStateChange?.(true);
       setIsPressing(false);
-      justJoinedRef.current = true; // Mark that we just joined via hold
-      controls.set({ scale: 2 });
+      justJoinedRef.current = true; 
+      if (variant === 'circle') {
+        controls.set({ scale: 2 });
+      } else {
+        controls.set({ width: '100%' });
+      }
     }, PRESS_DURATION);
   };
 
@@ -61,32 +92,78 @@ export default function JoinButton({
       clearTimeout(timerRef.current);
       timerRef.current = null;
       
-      // Revert if released early and not joined
       if (!isJoined) {
-        controls.start({ scale: 0, transition: { duration: 0.3 } });
+        if (variant === 'circle') {
+          controls.start({ scale: 0, transition: { duration: 0.3 } });
+        } else {
+          controls.start({ width: '0%', transition: { duration: 0.3 } });
+        }
       }
     }
   };
 
   const handleClick = (e: MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     
     if (isJoined) {
       if (justJoinedRef.current) {
-        // Ignore the click that happens immediately after a hold-to-join release
         justJoinedRef.current = false;
         return;
       }
-      // Click to Unjoin
+      unjoinEvent(id);
       setIsJoined(false);
       onStateChange?.(false);
-      controls.set({ scale: 0 });
+      if (variant === 'circle') {
+        controls.set({ scale: 0 });
+      } else {
+        controls.set({ width: '0%' });
+      }
     }
   };
 
+  if (variant === 'full') {
+    return (
+      <button 
+        onPointerDown={startPress}
+        onPointerUp={endPress}
+        onPointerLeave={endPress}
+        onClick={handleClick}
+        className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 transform active:scale-[0.98] select-none shadow-s relative overflow-hidden
+          ${isJoined ? 'bg-[#1D72FE] text-white shadow-blue-300' : 'bg-white text-[#1D72FE] shadow-gray-100'} 
+          ${className}`}
+      >
+        {/* Progress Fill Background */}
+        <motion.div
+          initial={{ width: '0%' }}
+          animate={controls}
+          className="absolute left-0 bottom-0 top-0 bg-[#1D72FE] origin-left pointer-events-none"
+        />
+
+        <div className="relative z-10 flex items-center justify-center gap-2 px-6">
+          {isJoined ? (
+            <>
+              <Check className="w-6 h-6 text-white" strokeWidth={3} />
+              <span className="text-lg">เข้าร่วมแล้ว</span>
+            </>
+          ) : (
+            <>
+              <div className="w-6 h-6 flex items-center justify-center transition-all duration-300">
+                <Logo 
+                  strokeColor={isPressing ? '#FFFFFF' : '#1D72FE'} 
+                  clipId={`clip0_join_full_${id}`} 
+                />
+              </div>
+              <span className={`text-lg transition-colors duration-300 ${isPressing ? 'text-white' : 'text-[#1D72FE]'}`}>เข้าร่วม</span>
+            </>
+          )}
+        </div>
+      </button>
+    );
+  }
+
   const sizeClasses = {
     sm: 'w-10 h-10',
-    md: 'w-12 h-12',
+    md: 'w-[65px] h-[65px]',
     lg: 'w-20 h-20'
   };
 
@@ -97,9 +174,9 @@ export default function JoinButton({
   };
 
   const paddingClasses = {
-    sm: 'p-1',
-    md: 'p-1.5',
-    lg: 'p-3'
+    sm: 'p-0',
+    md: 'p-3',
+    lg: 'p-4'
   };
 
   // Logo turns white as the blue background fills up during press
