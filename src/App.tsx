@@ -116,7 +116,10 @@ function AppContent() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
               >
-                <JoinedEventsPage onEventClick={handleEventClick} />
+                <JoinedEventsPage 
+                  onEventClick={handleEventClick} 
+                  customEvents={userEvents}
+                />
               </motion.div>
             ) : (
               <motion.div

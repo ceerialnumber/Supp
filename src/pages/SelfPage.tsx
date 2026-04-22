@@ -37,7 +37,7 @@ export default function SelfPage() {
         <div className="flex flex-col items-center mb-10 mt-4">
           <div className="w-60 h-60 rounded-full overflow-hidden shadow-l mb-4">
             <img
-              src="/images/user-large.jpg"
+              src="/images/User.jpg"
               alt="Profile"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

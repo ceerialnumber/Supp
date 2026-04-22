@@ -34,7 +34,7 @@ const parseThaiDate = (dateStr: string) => {
   return new Date(parseInt(year) - 543, monthIndex, parseInt(day)).getTime();
 };
 
-const FILTERED_EVENTS = ALL_EVENTS.filter(e => typeof e.id === 'string' && e.id.startsWith('e'));
+const VISIBLE_EVENTS = ALL_EVENTS;
 
 interface EyeCatchingPageProps {
   onEventClick: (event: any, joined?: boolean) => void;
@@ -45,7 +45,7 @@ export default function EyeCatchingPage({ onEventClick, customEvents = [] }: Eye
   const [sortBy, setSortBy] = useState<string | null>(null);
 
   const allVisibleEvents = useMemo(() => {
-    return [...customEvents, ...FILTERED_EVENTS];
+    return [...customEvents, ...VISIBLE_EVENTS];
   }, [customEvents]);
 
   const sortedEvents = useMemo(() => {

@@ -6,12 +6,14 @@ import { ALL_EVENTS } from '../data/events';
 
 interface JoinedEventsPageProps {
   onEventClick: (event: any, joined?: boolean) => void;
+  customEvents?: any[];
 }
 
-export default function JoinedEventsPage({ onEventClick }: JoinedEventsPageProps) {
+export default function JoinedEventsPage({ onEventClick, customEvents = [] }: JoinedEventsPageProps) {
   const { isEventJoined } = useJoin();
 
-  const joinedEvents = ALL_EVENTS.filter(event => isEventJoined(event.id));
+  const allPossibleEvents = [...ALL_EVENTS, ...customEvents];
+  const joinedEvents = allPossibleEvents.filter(event => isEventJoined(event.id));
 
   const handleRedirect = (event: any) => {
     onEventClick(event, true);
