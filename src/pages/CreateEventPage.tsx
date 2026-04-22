@@ -245,7 +245,7 @@ export default function CreateEventPage({ onSubmit }: CreateEventPageProps) {
                   <span className="text-xl">
                     {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')}
                   </span>
-                  <span className="text-[10px] uppercase tracking-widest text-[#1D72FE] font-black">Time</span>
+                  <span className="text-[9px] uppercase tracking-widest text-[#1D72FE] font-black">Time</span>
                 </div>
               </button>
             </div>
