@@ -158,7 +158,7 @@ export default function SignUpPage({ onSignUp, onBack }: SignUpPageProps) {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={"w-full bg-gray-50 border-none rounded-3xl py-4 pl-12 pr-14 text-gray-900 placeholder:text-gray-300 focus:ring-2 focus:ring-[#1371FF] transition-shadow outline-none normal-case " + TYPOGRAPHY.body.replace('text-gray-500', '')}
+                  className={"w-full bg-gray-50 border-none rounded-3xl py-4 pl-6 pr-14 text-gray-900 placeholder:text-gray-300 focus:ring-2 focus:ring-[#1371FF] transition-shadow outline-none normal-case " + TYPOGRAPHY.body.replace('text-gray-500', '')}
                 />
                 <button 
                   type="button"
