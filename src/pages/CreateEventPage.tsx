@@ -22,7 +22,7 @@ import {
   FilmIcon, 
   MusicIcon,
   LearningIcon
-} from '../components/EventType';
+} from '../components/events/EventType';
 import LocationPickerMap from '../components/events/LocationPickerMap';
 
 import { TYPOGRAPHY } from '../styles/typography';

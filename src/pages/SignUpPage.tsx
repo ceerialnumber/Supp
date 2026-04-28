@@ -147,6 +147,28 @@ export default function SignUpPage({ onSignUp, onBack }: SignUpPageProps) {
                 />
               </div>
             </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className={TYPOGRAPHY.label + " ml-1"}>Password</label>
+              <div className="relative group">
+                <input
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className={"w-full bg-gray-50 border-none rounded-3xl py-4 pl-12 pr-14 text-gray-900 placeholder:text-gray-300 focus:ring-2 focus:ring-[#1371FF] transition-shadow outline-none normal-case " + TYPOGRAPHY.body.replace('text-gray-500', '')}
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-gray-500 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
           </div>
 
           <motion.button
