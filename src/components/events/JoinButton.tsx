@@ -164,20 +164,8 @@ export default function JoinButton({
           controls.set({ width: '0%' });
         }
       }
-    } else {
-      // JOIN on click too for accessibility/intuitiveness
-      joinEvent(id);
-      setIsJoined(true);
-      onStateChange?.(true);
-      
-      if (isMounted.current) {
-        if (variant === 'circle') {
-          controls.start({ scale: 2, backgroundColor: circleActiveBgColor }).catch(() => {});
-        } else {
-          controls.start({ width: '100%', backgroundColor: activeBgColor }).catch(() => {});
-        }
-      }
     }
+    // Click no longer joins - must hold for 600ms
   };
 
   if (variant === 'full') {
