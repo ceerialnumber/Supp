@@ -43,6 +43,17 @@ function AppContent() {
     phone: string;
     profileImage?: string;
   } | null>(null);
+
+  // Persistence of registered users
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>(() => {
+    const saved = localStorage.getItem('app_registered_users');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('app_registered_users', JSON.stringify(registeredUsers));
+  }, [registeredUsers]);
+
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedOrganizer, setSelectedOrganizer] = useState<any>(null);
   const [isEyeCatchingList, setIsEyeCatchingList] = useState(false);
@@ -78,6 +89,8 @@ function AppContent() {
   const handleUpdateProfile = (newUserData: any) => {
     setUserData(newUserData);
     setIsEditingProfile(false);
+    // Update in registeredUsers as well
+    setRegisteredUsers(prev => prev.map(u => u.email === newUserData.email ? { ...u, ...newUserData } : u));
   };
 
   const handleDeleteEvent = (eventId: string | number) => {
@@ -168,7 +181,17 @@ function AppContent() {
                 >
                   <LoginPage 
                     onLogin={(data) => {
-                      if (!userData) {
+                      const user = registeredUsers.find(u => 
+                        (u.email === data.email || u.username === data.email) && 
+                        u.password === data.password
+                      );
+
+                      if (user) {
+                        setUserData(user);
+                        setIsLoggedIn(true);
+                        setIsLoggingIn(false);
+                      } else {
+                        // Fallback/Simulate for demo if not found in registered
                         const input = data.email;
                         const derivedUsername = input.includes('@') ? input.split('@')[0] : input;
                         const formattedName = derivedUsername.charAt(0).toUpperCase() + derivedUsername.slice(1);
@@ -179,9 +202,9 @@ function AppContent() {
                           email: input.includes('@') ? input : `${derivedUsername}@example.com`,
                           phone: "081-234-5678",
                         });
+                        setIsLoggedIn(true);
+                        setIsLoggingIn(false);
                       }
-                      setIsLoggedIn(true);
-                      setIsLoggingIn(false);
                     }} 
                     onBack={() => setIsLoggingIn(false)}
                     onSignUp={() => {
@@ -219,6 +242,7 @@ function AppContent() {
                 >
                   <SignUpPage 
                     onSignUp={(data) => {
+                      setRegisteredUsers(prev => [...prev, data]);
                       setUserData(data);
                       setIsLoggedIn(true);
                       setIsSigningUp(false);

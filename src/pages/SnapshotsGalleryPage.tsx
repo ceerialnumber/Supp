@@ -24,7 +24,7 @@ export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapsho
       y: 0,
       scale: 1,
       transition: { type: 'spring', damping: 25, stiffness: 120 }
-    });
+    }).catch(() => {});
   };
 
   const handleZoom = (delta: number) => {
@@ -33,7 +33,7 @@ export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapsho
       controls.start({
         scale: next,
         transition: { type: 'spring', damping: 25, stiffness: 120 }
-      });
+      }).catch(() => {});
       return next;
     });
   };
@@ -115,9 +115,18 @@ export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapsho
       <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
         {scatteredPhotos.map((photo, i) => {
           if (!photo.mood) return null;
-          // Extract color from background class (e.g., "bg-blue-600" -> "blue")
+          // Map mood colors to hex values for safe inline styling
+          const moodColors: Record<string, string> = {
+            blue: '#3b82f6',
+            yellow: '#eab308',
+            cyan: '#06b6d4',
+            red: '#ef4444',
+            gray: '#6b7280'
+          };
+          
           const colorMatch = photo.mood.bgColor.match(/bg-([a-z]+)/);
-          const color = colorMatch ? colorMatch[1] : 'blue';
+          const colorName = colorMatch ? colorMatch[1] : 'blue';
+          const hexColor = moodColors[colorName] || '#3b82f6';
           
           return (
             <motion.div
@@ -128,7 +137,8 @@ export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapsho
                 x: photo.x / 2, // Parallax effect
                 y: photo.y / 2
               }}
-              className={`absolute left-1/2 top-1/2 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] bg-${color}-500/30`}
+              className="absolute left-1/2 top-1/2 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]"
+              style={{ backgroundColor: `${hexColor}4D` }} // 30% opacity in hex
             />
           );
         })}
