@@ -70,24 +70,43 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
 
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    // For production (Vercel), convert to base64 instead of using API
+    const isProduction = import.meta.env.PROD;
 
-      if (!response.ok) throw new Error('Upload failed');
+    if (isProduction) {
+      // Convert to base64 for Vercel deployment
+      const reader = new FileReader();
+      reader.onload = () => {
+        setUploadedImage(reader.result as string);
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Failed to upload image. Please try again.');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For development, use the API
+      const formData = new FormData();
+      formData.append('image', file);
 
-      const data = await response.json();
-      setUploadedImage(data.url);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploading(false);
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+
+        const data = await response.json();
+        setUploadedImage(data.url);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Failed to upload image. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -272,14 +291,14 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
           ) : isUploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-              <span className={TYPOGRAPHY.labelEmphasis}>Uploading...</span>
+              <span className={TYPOGRAPHY.h3}>Uploading...</span>
             </div>
           ) : (
             <>
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4 text-[#1D72FE]">
                 <Plus className="w-8 h-8" />
               </div>
-              <span className={TYPOGRAPHY.labelEmphasis}>add pic</span>
+              <span className={TYPOGRAPHY.h3}>add pic</span>
             </>
           )}
 

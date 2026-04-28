@@ -97,24 +97,43 @@ export default function EditEventPage({ event, onSubmit, onDelete, onBack, userD
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
 
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    // For production (Vercel), convert to base64 instead of using API
+    const isProduction = import.meta.env.PROD;
 
-      if (!response.ok) throw new Error('Upload failed');
+    if (isProduction) {
+      // Convert to base64 for Vercel deployment
+      const reader = new FileReader();
+      reader.onload = () => {
+        setUploadedImage(reader.result as string);
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Failed to upload image. Please try again.');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For development, use the API
+      const formData = new FormData();
+      formData.append('image', file);
 
-      const data = await response.json();
-      setUploadedImage(data.url);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploading(false);
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+
+        const data = await response.json();
+        setUploadedImage(data.url);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Failed to upload image. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
