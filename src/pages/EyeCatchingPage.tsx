@@ -12,7 +12,7 @@ import {
   ArtIcon, 
   FilmIcon, 
   MusicIcon 
-} from '../components/events/EventType';
+} from '../components/EventType';
 import { ALL_EVENTS } from '../data/events';
 import { isFutureEvent, getEventDate, isOngoingToday } from '../lib/dateUtils';
 import { TYPOGRAPHY } from '../styles/typography';
