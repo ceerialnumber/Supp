@@ -84,13 +84,12 @@ export default function JoinButton({
     if (!isMounted.current) return;
     if (isJoined) {
       if (variant === 'circle') {
-        controls.start({ backgroundColor: circleActiveBgColor, transition: { duration: 0.3 } });
+        controls.start({ backgroundColor: circleActiveBgColor, transition: { duration: 0.3 } }).catch(() => {});
       } else {
-        controls.start({ backgroundColor: activeBgColor, transition: { duration: 0.3 } });
+        controls.start({ backgroundColor: activeBgColor, transition: { duration: 0.3 } }).catch(() => {});
       }
     }
   }, [circleActiveBgColor, activeBgColor, isJoined, variant, controls]);
-
   const PRESS_DURATION = 600; 
 
   const startPress = (e: PointerEvent) => {
@@ -105,13 +104,13 @@ export default function JoinButton({
         scale: 2,
         backgroundColor: circleActiveBgColor,
         transition: { duration: PRESS_DURATION / 1000, ease: "linear" }
-      });
+      }).catch(() => {});
     } else {
       controls.start({
         width: '100%',
         backgroundColor: activeBgColor,
         transition: { duration: PRESS_DURATION / 1000, ease: "linear" }
-      });
+      }).catch(() => {});
     }
     
     timerRef.current = setTimeout(() => {
@@ -138,9 +137,9 @@ export default function JoinButton({
       
       if (!isJoined) {
         if (variant === 'circle') {
-          controls.start({ scale: 0, transition: { duration: 0.3 } });
+          controls.start({ scale: 0, transition: { duration: 0.3 } }).catch(() => {});
         } else {
-          controls.start({ width: '0%', transition: { duration: 0.3 } });
+          controls.start({ width: '0%', transition: { duration: 0.3 } }).catch(() => {});
         }
       }
     }
@@ -173,9 +172,9 @@ export default function JoinButton({
       
       if (isMounted.current) {
         if (variant === 'circle') {
-          controls.start({ scale: 2, backgroundColor: circleActiveBgColor });
+          controls.start({ scale: 2, backgroundColor: circleActiveBgColor }).catch(() => {});
         } else {
-          controls.start({ width: '100%', backgroundColor: activeBgColor });
+          controls.start({ width: '100%', backgroundColor: activeBgColor }).catch(() => {});
         }
       }
     }

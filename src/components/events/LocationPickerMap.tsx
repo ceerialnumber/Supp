@@ -50,6 +50,11 @@ export default function LocationPickerMap({ onLocationSelect, initialCenter = [1
     try {
       // Use zoomed in reverse geocoding for more precise local address
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      
+      if (!response.ok) {
+        throw new Error(`Geocoding failed: ${response.statusText}`);
+      }
+
       const data = await response.json();
       
       if (data && data.address) {

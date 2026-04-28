@@ -5,7 +5,7 @@ import Logo from '../components/layout/Logo';
 import { TYPOGRAPHY } from '../styles/typography';
 
 interface LoginPageProps {
-  onLogin: (data: { email: string }) => void;
+  onLogin: (data: { email: string; password?: string }) => void;
   onBack: () => void;
   onSignUp: () => void;
   onForgotPassword: () => void;
@@ -18,8 +18,7 @@ export default function LoginPage({ onLogin, onBack, onSignUp, onForgotPassword 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
-    onLogin({ email });
+    onLogin({ email, password });
   };
 
   return (
