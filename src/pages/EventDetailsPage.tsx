@@ -24,17 +24,21 @@ export default function EventDetailsPage({ event, onBack, userData, isUserEvent,
   const isJoined = isEventJoined(event.id);
 
   const handleShare = async () => {
+    // Create a shareable URL with event ID
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?event=${event.id}`;
+    
     const shareData = {
       title: event.title,
       text: `Check out this event: ${event.title} on ${event.date}`,
-      url: window.location.href,
+      url: shareUrl,
     };
 
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }

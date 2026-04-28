@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { JoinProvider } from './context/JoinContext';
 
 import { useJoin } from './context/JoinContext';
+import { ALL_EVENTS } from './data/events';
 
 export default function App() {
   return (
@@ -63,6 +64,23 @@ function AppContent() {
   const [isMoodHistory, setIsMoodHistory] = useState(false);
   const [isSnapshotsGallery, setIsSnapshotsGallery] = useState(false);
   const [activeTab, setActiveTab] = useState<'activity' | 'joined' | 'self'>('activity');
+
+  // Handle shared event links (e.g., from ?event=1)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('event');
+    
+    if (eventId) {
+      // Find event in ALL_EVENTS or userEvents
+      const foundEvent = ALL_EVENTS.find(e => e.id === Number(eventId)) ||
+                        userEvents.find(e => e.id === Number(eventId));
+      if (foundEvent) {
+        setSelectedEvent(foundEvent);
+        // Clear URL params without refreshing
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [userEvents]);
 
   const handleEventClick = (event: any, joined: boolean = false) => {
     setSelectedEvent(event);
