@@ -6,7 +6,7 @@ import {
   PartyIcon,
   FilmIcon,
 
-} from '../components/events/EventType';
+} from '../components/EventType';
 
 export const ALL_EVENTS = [
   {
