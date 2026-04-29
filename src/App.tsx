@@ -32,7 +32,7 @@ export default function App() {
 }
 
 function AppContent() {
-  const { userEvents, addUserEvent, updateUserEvent, removeUserEvent } = useJoin();
+  const { userEvents, addUserEvent, updateUserEvent, removeUserEvent, joinEvent } = useJoin();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -90,8 +90,11 @@ function AppContent() {
 
   const handleAddEvent = (newEvent: any) => {
     addUserEvent(newEvent);
+    // Also join the event so it appears in History
+    joinEvent(newEvent.id);
     setIsCreatingEvent(false);
-    setIsEyeCatchingList(true);
+    // Go to History/Joined tab to see created events
+    setActiveTab('joined');
   };
 
   const handleEditEvent = () => {
