@@ -13,12 +13,13 @@ interface EventDetailsPageProps {
   event: any;
   userData?: any;
   isUserEvent?: boolean;
+  isLoggedIn?: boolean;
   onOrganizerClick?: (organizer: any) => void;
   onEdit?: () => void;
   onBack: () => void;
 }
 
-export default function EventDetailsPage({ event, onBack, userData, isUserEvent, onOrganizerClick, onEdit }: EventDetailsPageProps) {
+export default function EventDetailsPage({ event, onBack, userData, isUserEvent, isLoggedIn, onOrganizerClick, onEdit }: EventDetailsPageProps) {
   const { isEventJoined, unjoinEvent, getEventParticipantCount } = useJoin();
   const [copied, setCopied] = useState(false);
   const isJoined = isEventJoined(event.id);
@@ -299,12 +300,31 @@ export default function EventDetailsPage({ event, onBack, userData, isUserEvent,
                 Later
               </motion.button>
             )}
-            <JoinButton 
-              id={event.id} 
-              date={event.date}
-              time={event.time}
-              size="lg" 
-            />
+            
+            {/* Show JoinButton if logged in, otherwise show login prompt */}
+            {isLoggedIn ? (
+              <JoinButton 
+                id={event.id} 
+                date={event.date}
+                time={event.time}
+                size="lg" 
+              />
+            ) : (
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  // Store the event ID to return to after login
+                  sessionStorage.setItem('pendingEventId', event.id.toString());
+                  onBack();
+                }}
+                className="px-8 py-5 bg-[#1D72FE] text-white rounded-full font-bold text-lg shadow-lg shadow-blue-200 hover:bg-blue-600 transition-colors"
+              >
+                Log in to Join
+              </motion.button>
+            )}
           </div>
         )}
       </div>

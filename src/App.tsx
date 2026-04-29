@@ -208,6 +208,16 @@ function AppContent() {
                         setUserData(user);
                         setIsLoggedIn(true);
                         setIsLoggingIn(false);
+                        // Check if there's a pending event to return to
+                        const pendingEventId = sessionStorage.getItem('pendingEventId');
+                        if (pendingEventId) {
+                          sessionStorage.removeItem('pendingEventId');
+                          const pendingEvent = ALL_EVENTS.find(e => e.id === Number(pendingEventId)) ||
+                                              userEvents.find(e => e.id === Number(pendingEventId));
+                          if (pendingEvent) {
+                            setSelectedEvent(pendingEvent);
+                          }
+                        }
                       } else {
                         // Fallback/Simulate for demo if not found in registered
                         const input = data.email;
@@ -222,6 +232,16 @@ function AppContent() {
                         });
                         setIsLoggedIn(true);
                         setIsLoggingIn(false);
+                        // Check if there's a pending event to return to
+                        const pendingEventId = sessionStorage.getItem('pendingEventId');
+                        if (pendingEventId) {
+                          sessionStorage.removeItem('pendingEventId');
+                          const pendingEvent = ALL_EVENTS.find(e => e.id === Number(pendingEventId)) ||
+                                              userEvents.find(e => e.id === Number(pendingEventId));
+                          if (pendingEvent) {
+                            setSelectedEvent(pendingEvent);
+                          }
+                        }
                       }
                     }} 
                     onBack={() => setIsLoggingIn(false)}
@@ -334,6 +354,7 @@ function AppContent() {
                       onBack={handleBack} 
                       userData={userData}
                       isUserEvent={userEvents.some(e => e.id === selectedEvent.id)}
+                      isLoggedIn={isLoggedIn}
                       onOrganizerClick={(organizer) => {
                         if (userEvents.some(e => e.id === selectedEvent.id)) {
                           handleTabChange('self');
