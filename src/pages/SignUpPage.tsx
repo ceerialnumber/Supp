@@ -85,26 +85,37 @@ export default function SignUpPage({ onSignUp, prefilledEmail = '', onBack }: Si
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('SignUpPage: Form submitted with:', { name: formData.name, username: formData.username, email: formData.email });
     setLoading(true);
     setError(null);
+    if (!formData.name || !formData.username || !formData.email || !formData.phone) {
+      console.error('SignUpPage: Missing required fields');
+      setError("Please fill in all required fields");
+      setLoading(false);
+      return;
+    }
     if (formData.password.length < 6) {
+      console.error('SignUpPage: Password too short');
       setError("Password must be at least 6 characters long");
       setLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
+      console.error('SignUpPage: Passwords do not match');
       setError("Passwords do not match");
       setLoading(false);
       return;
     }
 
     try {
+      console.log('SignUpPage: Calling onSignUp handler');
       await onSignUp({
         ...formData,
         profileImage: profileImage || undefined,
       });
     } catch (err: any) {
+      console.error('SignUpPage: onSignUp error:', err);
       setError(err.message || "Failed to create account");
     } finally {
       setLoading(false);

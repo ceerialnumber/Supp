@@ -19,6 +19,11 @@ export default function LoginPage({ onLogin, onSocialLogin, onBack, onSignUp, on
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('LoginPage: Form submitted with:', { email, password });
+    if (!email || !password) {
+      console.error('LoginPage: Email or password is empty');
+      return;
+    }
     onLogin({ email, password });
   };
 
