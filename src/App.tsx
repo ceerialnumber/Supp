@@ -131,7 +131,14 @@ function AppContent() {
     
       try {
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        await setDoc(userRef, { ...newUserData, updatedAt: new Date().toISOString() }, { merge: true });
+        const updateData: any = { ...newUserData, updatedAt: new Date().toISOString() };
+        // Remove any undefined values
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined) {
+            delete updateData[key];
+          }
+        });
+        await setDoc(userRef, updateData, { merge: true });
         setUserData(newUserData);
         setIsEditingProfile(false);
       } catch (error) {
@@ -422,12 +429,26 @@ function AppContent() {
                         };
                         delete (cleanData as any).password; 
                         delete (cleanData as any).confirmPassword;
+                        // Only include profileImage if it exists
+                        if (!cleanData.profileImage) {
+                          delete (cleanData as any).profileImage;
+                        }
 
-                        await setDoc(userRef, {
+                        const docData: any = {
                           ...cleanData,
                           uid: uid,
                           registeredAt: new Date().toISOString()
+                        };
+                        
+                        // Remove any undefined values
+                        Object.keys(docData).forEach(key => {
+                          if (docData[key] === undefined) {
+                            delete docData[key];
+                          }
                         });
+
+                        console.log('Document data to save:', docData);
+                        await setDoc(userRef, docData);
                         
                         console.log('Signup completed successfully');
                         
