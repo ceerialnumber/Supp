@@ -129,18 +129,13 @@ export default function EditEventPage({ event, onSubmit, onDelete, onBack, userD
       const fetchRes = await fetch(compressed);
       const blob = await fetchRes.blob();
 
-      const formData = new FormData();
-      formData.append('image', blob, 'event-image.jpg');
+      // 4. Upload to Firebase Storage
+      const { uploadImageToStorage } = await import('../lib/firestoreUtils');
+      const eventId = event.id || 'temp_' + Date.now();
+      const path = `event-images/${eventId}_${file.name}`;
+      const downloadURL = await uploadImageToStorage(blob, path);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const data = await response.json();
-      setUploadedImage(data.url);
+      setUploadedImage(downloadURL);
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');

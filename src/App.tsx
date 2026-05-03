@@ -277,7 +277,7 @@ function AppContent() {
                         if (!loginEmail.includes('@')) {
                           try {
                             const usersRef = collection(db, 'users');
-                            const q = query(usersRef, where('username', '==', loginEmail), limit(1));
+                            const q = query(usersRef, where('username', '==', loginEmail.toLowerCase()), limit(1));
                             const querySnapshot = await getDocs(q);
                             
                             if (!querySnapshot.empty) {

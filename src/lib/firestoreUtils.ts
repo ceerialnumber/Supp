@@ -1,4 +1,5 @@
-import { auth } from './firebase';
+import { auth, storage } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export enum OperationType {
   CREATE = 'create',
@@ -7,6 +8,7 @@ export enum OperationType {
   LIST = 'list',
   GET = 'get',
   WRITE = 'write',
+  UPLOAD = 'upload',
 }
 
 export interface FirestoreErrorInfo {
@@ -45,4 +47,16 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
+}
+
+export async function uploadImageToStorage(file: File | Blob, path: string): Promise<string> {
+  try {
+    const storageRef = ref(storage, path);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPLOAD, path);
+    throw error;
+  }
 }

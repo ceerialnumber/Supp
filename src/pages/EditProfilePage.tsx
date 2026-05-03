@@ -45,17 +45,13 @@ export default function EditProfilePage({ userData, onSave, onBack }: EditProfil
         const fetchRes = await fetch(compressed);
         const blob = await fetchRes.blob();
         
-        const formData = new FormData();
-        formData.append('image', blob, 'profile.jpg');
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) throw new Error('Upload failed');
-        const data = await response.json();
-        setProfileImage(data.url);
+        // Upload to Firebase Storage
+        const { uploadImageToStorage } = await import('../lib/firestoreUtils');
+        const userId = userData?.name || 'unknown'; // Use user identifier
+        const path = `profile-images/${userId}_${Date.now()}_${file.name}`;
+        const downloadURL = await uploadImageToStorage(blob, path);
+        
+        setProfileImage(downloadURL);
       } catch (err: any) {
         console.error("Upload error:", err);
         alert("Failed to upload image. Please try again.");
