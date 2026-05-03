@@ -178,6 +178,7 @@ function AppContent() {
   };
 
   const getAuthErrorMessage = (code: string) => {
+    console.log('getAuthErrorMessage called with code:', code);
     switch (code) {
       case 'auth/invalid-email':
         return 'Invalid email address. Please enter a valid email format (e.g., name@example.com).';
@@ -302,6 +303,9 @@ function AppContent() {
                         await signInWithEmailAndPassword(auth, loginEmail, data.password || '');
                       } catch (error: any) {
                         console.error("Login error:", error);
+                        console.error("Error code:", error.code);
+                        console.error("Error message:", error.message);
+                        console.error("Full error object:", JSON.stringify(error, null, 2));
                         const msg = getAuthErrorMessage(error.code);
                         if (msg) {
                           alert(`Login failed: ${msg}`);
@@ -319,8 +323,11 @@ function AppContent() {
                         const p = googleProvider;
                         await signInWithPopup(auth, p);
                       } catch (error: any) {
+                        console.error("Social login error:", error);
+                        console.error("Error code:", error.code);
+                        console.error("Error message:", error.message);
+                        console.error("Full error object:", JSON.stringify(error, null, 2));
                         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-                          console.error("Social login error:", error);
                           const msg = getAuthErrorMessage(error.code);
                           if (msg) {
                             alert(`Google login failed: ${msg}`);
@@ -430,6 +437,9 @@ function AppContent() {
                         setIsSigningUp(false);
                       } catch (error: any) {
                         console.error("Signup error:", error);
+                        console.error("Error code:", error.code);
+                        console.error("Error message:", error.message);
+                        console.error("Full error object:", JSON.stringify(error, null, 2));
                         const authMsg = getAuthErrorMessage(error.code);
                         const msg = (error.message === 'Already exist account') ? error.message : authMsg;
                         if (msg) {
