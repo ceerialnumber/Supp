@@ -53,6 +53,7 @@ function AppContent() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? `User: ${user.email}, UID: ${user.uid}` : 'No user');
       if (user) {
         try {
           const docRef = doc(db, 'users', user.uid);
@@ -60,6 +61,7 @@ function AppContent() {
 
           if (docSnap.exists()) {
             const data = docSnap.data();
+            console.log('User document found:', data);
             setUserData({
               name: data.name,
               username: data.username,
@@ -71,6 +73,7 @@ function AppContent() {
             setIsSigningUp(false);
             setIsLoggingIn(false);
           } else {
+            console.log('User authenticated but no Firestore document found');
             // If authenticated but no record in Firestore, user needs to complete signup
             setPrefilledEmail(user.email || '');
             setIsLoggedIn(false);
@@ -78,6 +81,7 @@ function AppContent() {
             setIsLoggingIn(false);
           }
         } catch (error) {
+          console.error('Error fetching user document:', error);
           handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
         }
       } else {
@@ -270,6 +274,7 @@ function AppContent() {
                     onLogin={async (data) => {
                       if (isAuthInProgress) return;
                       setIsAuthInProgress(true);
+                      console.log('Starting login process for:', data.email);
                       try {
                         let loginEmail = data.email;
                         
@@ -298,7 +303,11 @@ function AppContent() {
                       } catch (error: any) {
                         console.error("Login error:", error);
                         const msg = getAuthErrorMessage(error.code);
-                        if (msg) alert(msg);
+                        if (msg) {
+                          alert(`Login failed: ${msg}`);
+                        } else {
+                          alert(`Login failed: ${error.message || 'Unknown error'}`);
+                        }
                       } finally {
                         setIsAuthInProgress(false);
                       }
@@ -312,9 +321,13 @@ function AppContent() {
                       } catch (error: any) {
                         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
                           console.error("Social login error:", error);
+                          const msg = getAuthErrorMessage(error.code);
+                          if (msg) {
+                            alert(`Google login failed: ${msg}`);
+                          } else {
+                            alert(`Google login failed: ${error.message || 'Unknown error'}`);
+                          }
                         }
-                        const msg = getAuthErrorMessage(error.code);
-                        if (msg) alert(msg);
                       } finally {
                         setIsAuthInProgress(false);
                       }
@@ -357,9 +370,11 @@ function AppContent() {
                     onSignUp={async (data) => {
                       if (isAuthInProgress) return;
                       setIsAuthInProgress(true);
+                      console.log('Starting signup process for:', data.email);
                       try {
                         // 1. Check if email already exists in Firestore users collection
                         // (Optional but good for explicit checking alongside Auth)
+                        console.log('Checking for existing email...');
                         const emailQuery = query(collection(db, 'users'), where('email', '==', data.email.toLowerCase()), limit(1));
                         const emailSnap = await getDocs(emailQuery);
                         if (!emailSnap.empty) {
@@ -367,6 +382,7 @@ function AppContent() {
                         }
 
                         // 2. Check if username already exists
+                        console.log('Checking for existing username...');
                         const usernameQuery = query(collection(db, 'users'), where('username', '==', data.username.toLowerCase()), limit(1));
                         const usernameSnap = await getDocs(usernameQuery);
                         if (!usernameSnap.empty) {
@@ -374,11 +390,14 @@ function AppContent() {
                         }
 
                         let uid = auth.currentUser?.uid;
+                        console.log('Current user UID:', uid);
                         
                         if (!uid && data.password) {
                           // Manual signup
+                          console.log('Creating new auth user...');
                           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
                           uid = userCredential.user.uid;
+                          console.log('Auth user created:', uid);
                         }
 
                         if (!uid) {
@@ -387,6 +406,7 @@ function AppContent() {
                           return;
                         }
 
+                        console.log('Creating Firestore document...');
                         const userRef = doc(db, 'users', uid);
                         const cleanData = { 
                           ...data, 
@@ -402,6 +422,8 @@ function AppContent() {
                           registeredAt: new Date().toISOString()
                         });
                         
+                        console.log('Signup completed successfully');
+                        
                         setUserData(cleanData);
                         setPrefilledEmail('');
                         setIsLoggedIn(true);
@@ -410,7 +432,11 @@ function AppContent() {
                         console.error("Signup error:", error);
                         const authMsg = getAuthErrorMessage(error.code);
                         const msg = (error.message === 'Already exist account') ? error.message : authMsg;
-                        if (msg) alert(msg);
+                        if (msg) {
+                          alert(`Signup failed: ${msg}`);
+                        } else {
+                          alert(`Signup failed: ${error.message || 'Unknown error'}`);
+                        }
                       } finally {
                         setIsAuthInProgress(false);
                       }

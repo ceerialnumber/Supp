@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Auth Test</title>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            "projectId": "gen-lang-client-0705501801",
+            "appId": "1:412062510701:web:946506145efef1d7839964",
+            "apiKey": "AIzaSyDAOmpK7tHAH_kaJftDM1LGIltuq2cBZyA",
+            "authDomain": "gen-lang-client-0705501801.firebaseapp.com",
+            "firestoreDatabaseId": "ai-studio-9078491e-136e-48af-8656-12ccccee3a49",
+            "storageBucket": "gen-lang-client-0705501801.firebasestorage.app",
+            "messagingSenderId": "412062510701",
+            "measurementId": ""
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        window.testSignup = async () => {
+            try {
+                const result = await createUserWithEmailAndPassword(auth, 'test@example.com', 'password123');
+                console.log('Signup successful:', result.user.email);
+            } catch (error) {
+                console.error('Signup error:', error.code, error.message);
+            }
+        };
+
+        window.testLogin = async () => {
+            try {
+                const result = await signInWithEmailAndPassword(auth, 'test@example.com', 'password123');
+                console.log('Login successful:', result.user.email);
+            } catch (error) {
+                console.error('Login error:', error.code, error.message);
+            }
+        };
+    </script>
+</head>
+<body>
+    <h1>Firebase Auth Test</h1>
+    <button onclick="testSignup()">Test Signup</button>
+    <button onclick="testLogin()">Test Login</button>
+    <div id="output"></div>
+</body>
+</html>
