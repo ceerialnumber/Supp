@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { User, Mail, ShieldCheck } from 'lucide-react';
 import { useJoin } from '../context/JoinContext';
 import { MOODS } from '../components/mood/MoodPicker';
-import { ALL_EVENTS } from '../data/events';
 import { TYPOGRAPHY } from '../styles/typography';
 
 interface UserProfilePageProps {
@@ -38,7 +37,7 @@ export default function UserProfilePage({ organizer, onEventClick }: UserProfile
   const username = organizer.username || organizer.email.split('@')[0];
 
   const organizerEvents = useMemo(() => {
-    return [...ALL_EVENTS, ...userEvents].filter(e => e.organizer?.email === organizer.email);
+    return userEvents.filter(e => e.organizer?.email === organizer.email);
   }, [organizer.email, userEvents]);
 
   return (

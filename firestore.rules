@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    match /users/{userId} {
+      // Allow anyone to read profiles (needed for username login and profile discovery)
+      allow get: if isValidId(userId);
+      allow list: if true;
+      
+      // Only the user themselves can write
+      allow create: if isOwner(userId) && isValidId(userId);
+      allow update: if isOwner(userId) && isValidId(userId);
+    }
+
+    match /events/{eventId} {
+      function isValidEvent(data) {
+        return data.creatorId == request.auth.uid
+          && data.title is string && data.title.size() <= 100
+          && data.type is string
+          && (data.keys().hasAll(['title', 'type', 'creatorId']));
+      }
+
+      // Anyone logged in can read events
+      allow get: if isSignedIn() && isValidId(eventId);
+      allow list: if isSignedIn();
+      
+      // Any logged in user can create an event
+      allow create: if isSignedIn() 
+        && isValidEvent(request.resource.data)
+        && isValidId(eventId);
+      
+      // Only the creator can update or delete their event
+      allow update, delete: if isSignedIn() 
+        && resource.data.creatorId == request.auth.uid
+        && isValidId(eventId);
+    }
+
+    match /registrations/{regId} {
+      function isValidRegistration(data) {
+        return data.userId == request.auth.uid
+          && (data.eventId is string || data.eventId is int)
+          && (data.keys().hasAll(['userId', 'eventId']))
+          // Optional fields
+          && (!data.keys().hasAny(['moodIdx']) || data.moodIdx is int)
+          && (!data.keys().hasAny(['createdAt']) || data.createdAt is string)
+          && (!data.keys().hasAny(['updatedAt']) || data.updatedAt is string);
+      }
+
+      // Allow user to see their own registrations
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid && isValidId(regId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Allow creation of registration
+      allow create: if isSignedIn() 
+        && isValidRegistration(request.resource.data)
+        && isValidId(regId);
+      
+      // Allow update of registration (e.g. for mood)
+      allow update: if isSignedIn() 
+        && isValidRegistration(request.resource.data)
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId // userId is immutable
+        && isValidId(regId);
+      
+      // Allow deletion of registration
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid && isValidId(regId);
+    }
+  }
+}

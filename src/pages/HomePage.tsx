@@ -3,7 +3,6 @@ import FeaturedStack from '../components/events/FeaturedStack';
 import Snapshots from '../components/events/Snapshots';
 import CountdownTimer from '../components/events/CountdownTimer';
 import { motion } from 'motion/react';
-import { ALL_EVENTS } from '../data/events';
 import { Calendar, ArrowRight, Clock, MapPin, Plus, Bell } from 'lucide-react';
 import { useJoin } from '../context/JoinContext';
 import { getEventDate } from '../lib/dateUtils';
@@ -17,17 +16,16 @@ interface HomePageProps {
 }
 
 export default function HomePage({ onEventClick, onDiscoverMore, onHistoryClick, onSnapshotsClick }: HomePageProps) {
-  const { joinedEventIds, userEvents } = useJoin();
+  const { isEventJoined, userEvents } = useJoin();
 
-  // Combine joined external events and user created events
+  // Combine joined events (could be hardcoded or from DB)
   const { scheduleToDisplay, totalScheduleCount, nextEvent } = useMemo(() => {
-    const joined = ALL_EVENTS.filter(e => joinedEventIds.has(e.id as number));
-    const created = userEvents.filter(ue => !joinedEventIds.has(ue.id as number));
-    const combined = [...joined, ...created];
+    // joinedEventIds contains IDs of events the user has joined, but isEventJoined also checks creators
+    const joined = userEvents.filter(e => isEventJoined(e.id));
     
     const now = new Date();
 
-    const sortedCombined = combined
+    const sortedCombined = joined
       .filter(event => getEventDate(event.date, event.time) >= now)
       .sort((a, b) => getEventDate(a.date, a.time).getTime() - getEventDate(b.date, b.time).getTime());
 
@@ -36,7 +34,7 @@ export default function HomePage({ onEventClick, onDiscoverMore, onHistoryClick,
       scheduleToDisplay: sortedCombined.slice(1, 4), // Next 3 after the immediate next
       totalScheduleCount: sortedCombined.length
     };
-  }, [joinedEventIds, userEvents]);
+  }, [isEventJoined, userEvents]);
 
   const parseDateBadge = (dateStr: string) => {
     const parts = dateStr.split(' ');
@@ -97,7 +95,7 @@ export default function HomePage({ onEventClick, onDiscoverMore, onHistoryClick,
                         {nextEvent.date}
                       </span>
                     </div>
-                    <h3 className="text-2xl font-black text-gray-900 leading-tight mb-4 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-2xl font-black text-gray-900 leading-tight mb-4 group-hover:text-blue-600 transition-colors line-clamp-2">
                       {nextEvent.title}
                     </h3>
                     <div className="flex flex-wrap gap-4 text-xs font-bold text-gray-500">
@@ -105,9 +103,9 @@ export default function HomePage({ onEventClick, onDiscoverMore, onHistoryClick,
                         <Clock size={14} className="text-blue-500" />
                         {nextEvent.time}
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin size={14} className="text-blue-500" />
-                        {nextEvent.location}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <MapPin size={14} className="text-blue-500 flex-shrink-0" />
+                        <span className="line-clamp-2">{nextEvent.location}</span>
                       </div>
                     </div>
                   </div>
@@ -143,7 +141,7 @@ export default function HomePage({ onEventClick, onDiscoverMore, onHistoryClick,
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-bold text-gray-900 truncate mb-0.5">{event.title}</h4>
+                          <h4 className="text-sm font-bold text-gray-900 line-clamp-2 mb-0.5">{event.title}</h4>
                           <p className="text-[10px] font-bold text-gray-400">{event.time}</p>
                         </div>
                         <ArrowRight size={16} className="text-gray-300 mr-2" />

@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Calendar, Clock, MapPin, User, CheckCircle2, History as HistoryIcon } from 'lucide-react';
 import { TYPOGRAPHY } from '../../styles/typography';
 import { isUpcoming, getEventDate } from '../../lib/dateUtils';
+import { getEventIcon } from '../../lib/eventUtils';
+import { auth } from '../../lib/firebase';
 import Countdown from './Countdown';
 import MoodStatsBoard from '../mood/MoodStatsBoard';
 import MoodPicker from '../mood/MoodPicker';
@@ -18,7 +20,8 @@ interface HistoryEventCardProps {
 
 export default function HistoryEventCard({ event, index, status, userData, onClick }: HistoryEventCardProps) {
   const upcoming = isUpcoming(event.date, event.time);
-  const isCreated = status === 'created';
+  const isCreatorOfEvent = event.creatorId === auth.currentUser?.uid;
+  const resolvedIcon = event.Icon || getEventIcon(event.type);
 
   return (
     <motion.div
@@ -49,11 +52,11 @@ export default function HistoryEventCard({ event, index, status, userData, onCli
           <div className="absolute top-4 left-4 flex flex-col gap-2">
             {/* Created vs Joined Badge */}
             <div className={`px-4 py-2 rounded-2xl backdrop-blur-md flex items-center gap-2 shadow-sm ${
-              isCreated ? 'bg-blue-600/90 text-white' : 'bg-white/90 text-gray-900 border border-white/20'
+              isCreatorOfEvent ? 'bg-blue-600/90 text-white' : 'bg-white/90 text-gray-900 border border-white/20'
             }`}>
-              {isCreated ? <User size={14} className="fill-current" /> : <CheckCircle2 size={14} className="text-blue-600" />}
+              {isCreatorOfEvent ? <User size={14} className="fill-current" /> : <CheckCircle2 size={14} className="text-blue-600" />}
               <span className="text-[10px] font-bold uppercase tracking-wider">
-                {isCreated ? "Created" : "Joined"}
+                {isCreatorOfEvent ? "Organizer" : "Joined"}
               </span>
             </div>
 
@@ -69,10 +72,10 @@ export default function HistoryEventCard({ event, index, status, userData, onCli
           </div>
 
           {/* Event Type Floating Icon */}
-          {event.Icon && (
+          {resolvedIcon && (
             <div className="absolute bottom-4 right-4 translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
               <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-white/50">
-                <event.Icon size={24} className="!w-10 !h-10" noBackground noShadow />
+                {React.createElement(resolvedIcon, { size: 24, className: "!w-10 !h-10", noBackground: true, noShadow: true } as any)}
               </div>
             </div>
           )}
@@ -81,11 +84,11 @@ export default function HistoryEventCard({ event, index, status, userData, onCli
         {/* Content Section */}
         <div className="p-6 flex-1 flex flex-col">
           <div className="mb-2">
-            <h3 className={TYPOGRAPHY.h3 + " truncate group-hover:text-blue-600 transition-colors"}>
+            <h3 className={TYPOGRAPHY.h3 + " line-clamp-2 group-hover:text-blue-600 transition-colors"}>
               {event.title}
             </h3>
-            <p className={TYPOGRAPHY.label + " mt-1 text-gray-400"}>
-              Organized by {isCreated ? (userData?.name || "Me") : (event.organizer?.name || "Student Union")}
+            <p className={TYPOGRAPHY.label + " mt-1 text-gray-400 line-clamp-1"}>
+              Organized by {isCreatorOfEvent ? (userData?.name || "Me") : (event.organizer?.name || "Student Union")}
             </p>
           </div>
           
@@ -102,7 +105,7 @@ export default function HistoryEventCard({ event, index, status, userData, onCli
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium min-w-0">
               <MapPin size={13} className="text-blue-500 flex-shrink-0" />
-              <span className="truncate">{event.location}</span>
+              <span className="line-clamp-2">{event.location}</span>
             </div>
           </div>
 
@@ -119,23 +122,22 @@ export default function HistoryEventCard({ event, index, status, userData, onCli
                 <Countdown targetDate={getEventDate(event.date, event.time)} />
               </div>
             </div>
-          ) : isCreated ? (
-            <div className="pt-4 pb-2 border-t border-gray-50">
-              <div className="flex items-center justify-between mb-2 px-1">
-                <p className="text-sm font-bold text-gray-900 tracking-tight">Feedback</p>
-                <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-              </div>
-              <div className="w-full">
-                <MoodStatsBoard eventId={event.id} compact />
-              </div>
-            </div>
           ) : (
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between px-1">
                 <p className={TYPOGRAPHY.labelEmphasis + " !text-gray-900"}>Recall your mood</p>
-                <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">Done</span>
+                <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                  {isCreatorOfEvent ? "Organizer" : "Done"}
+                </span>
               </div>
               <MoodPicker eventId={event.id} />
+              
+              {isCreatorOfEvent && (
+                <div className="pt-4 border-t border-gray-50">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase mb-2">Overall Feedback</p>
+                  <MoodStatsBoard eventId={event.id} compact />
+                </div>
+              )}
             </div>
           )}
         </div>

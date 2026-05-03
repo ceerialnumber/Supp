@@ -14,6 +14,7 @@ interface JoinButtonProps {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'circle' | 'full';
   className?: string;
+  isCreator?: boolean;
   onStateChange?: (isJoined: boolean) => void;
 }
 
@@ -24,6 +25,7 @@ export default function JoinButton({
   size = 'md', 
   variant = 'circle',
   className = '',
+  isCreator = false,
   onStateChange
 }: JoinButtonProps) {
   const { isEventJoined, joinEvent, unjoinEvent, eventMoods } = useJoin();
@@ -33,7 +35,7 @@ export default function JoinButton({
   const currentMood = hasSelectedMood ? MOODS[selectedMoodIdx] : null;
   const upcoming = date && time ? isUpcoming(date, time) : false;
   
-  const [isJoined, setIsJoined] = useState(isJoinedInContext);
+  const [isJoined, setIsJoined] = useState(isJoinedInContext || isCreator);
   const [isPressing, setIsPressing] = useState(false);
   const justJoinedRef = useRef(false); // Flag to prevent immediate unjoin on release
   const isMounted = useRef(true);
@@ -50,8 +52,8 @@ export default function JoinButton({
 
   // Sync internal state with context when context changes (e.g. from another button)
   useEffect(() => {
-    setIsJoined(isJoinedInContext);
-  }, [isJoinedInContext]);
+    setIsJoined(isJoinedInContext || isCreator);
+  }, [isJoinedInContext, isCreator]);
 
   // Handle background color based on mood
   const activeBgColor = currentMood ? currentMood.hex : '#1D72FE';
@@ -90,7 +92,7 @@ export default function JoinButton({
       }
     }
   }, [circleActiveBgColor, activeBgColor, isJoined, variant, controls]);
-  const PRESS_DURATION = 600; 
+  const PRESS_DURATION = 800; 
 
   const startPress = (e: PointerEvent) => {
     e.stopPropagation();
@@ -164,8 +166,9 @@ export default function JoinButton({
           controls.set({ width: '0%' });
         }
       }
+    } else {
+      // DONT JOIN on click - only join on long press as requested
     }
-    // Click no longer joins - must hold for 600ms
   };
 
   if (variant === 'full') {
@@ -177,16 +180,24 @@ export default function JoinButton({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="bg-blue-600 rounded-full p-1 shadow-sm">
-                    <Check size={14} className="text-white" />
+                    {isCreator ? (
+                      <Logo strokeColor="#FFFFFF" className="w-3.5 h-3.5" clipId={`logo_joined_creator_${id}`} />
+                    ) : (
+                      <Check size={14} className="text-white" />
+                    )}
                   </div>
-                  <span className="text-sm font-bold text-blue-600">You're in!</span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {isCreator ? "Organizing" : "You're in!"}
+                  </span>
                 </div>
-                <button 
-                  onClick={handleClick}
-                  className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider"
-                >
-                  Cancel
-                </button>
+                {!isCreator && (
+                  <button 
+                    onClick={handleClick}
+                    className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
               <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50 flex flex-col items-center">
                 <p className="text-[10px] font-bold text-blue-400 mb-2 uppercase tracking-widest font-mono">Event starts in</p>
@@ -200,16 +211,24 @@ export default function JoinButton({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="bg-blue-600 rounded-full p-1 shadow-sm">
-                    <Check size={14} className="text-white" />
+                    {isCreator ? (
+                      <Logo strokeColor="#FFFFFF" className="w-3.5 h-3.5" clipId={`logo_passed_creator_${id}`} />
+                    ) : (
+                      <Check size={14} className="text-white" />
+                    )}
                   </div>
-                  <span className="text-sm font-bold text-blue-600">You're in!</span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {isCreator ? "Organizing" : "You're in!"}
+                  </span>
                 </div>
-                <button 
-                  onClick={handleClick}
-                  className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider"
-                >
-                  Cancel
-                </button>
+                {!isCreator && (
+                  <button 
+                    onClick={handleClick}
+                    className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
               
               <div className="bg-gray-50 rounded-2xl p-4">

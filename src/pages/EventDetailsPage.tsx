@@ -7,39 +7,36 @@ import MoodStatsBoard from '../components/mood/MoodStatsBoard';
 import EventCountdownCard from '../components/events/EventCountdownCard';
 import { useJoin } from '../context/JoinContext';
 import { isUpcoming, getEventDate } from '../lib/dateUtils';
+import { getEventIcon } from '../lib/eventUtils';
 import { TYPOGRAPHY } from '../styles/typography';
 
 interface EventDetailsPageProps {
   event: any;
   userData?: any;
   isUserEvent?: boolean;
-  isLoggedIn?: boolean;
   onOrganizerClick?: (organizer: any) => void;
   onEdit?: () => void;
   onBack: () => void;
 }
 
-export default function EventDetailsPage({ event, onBack, userData, isUserEvent, isLoggedIn, onOrganizerClick, onEdit }: EventDetailsPageProps) {
+export default function EventDetailsPage({ event, onBack, userData, isUserEvent, onOrganizerClick, onEdit }: EventDetailsPageProps) {
   const { isEventJoined, unjoinEvent, getEventParticipantCount } = useJoin();
   const [copied, setCopied] = useState(false);
   const isJoined = isEventJoined(event.id);
+  const resolvedIcon = event.Icon || getEventIcon(event.type);
 
   const handleShare = async () => {
-    // Create a shareable URL with event ID
-    const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = `${baseUrl}?event=${event.id}`;
-    
     const shareData = {
       title: event.title,
       text: `Check out this event: ${event.title} on ${event.date}`,
-      url: shareUrl,
+      url: window.location.href,
     };
 
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(shareUrl);
+        await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
@@ -167,8 +164,8 @@ export default function EventDetailsPage({ event, onBack, userData, isUserEvent,
 
           <div className="flex flex-col items-center gap-3">
             <div className="flex-shrink-0 pt-1">
-              {event.Icon ? (
-                <event.Icon noShadow size={48} />
+              {resolvedIcon ? (
+                React.createElement(resolvedIcon, { noShadow: true, size: 48 } as any)
               ) : (
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border border-blue-100 shadow-sm">
                   <Sun className="w-10 h-10 text-blue-600" />
@@ -237,11 +234,17 @@ export default function EventDetailsPage({ event, onBack, userData, isUserEvent,
             ) : (
               <>
                 <h2 className={TYPOGRAPHY.sectionTitle + " mb-6 px-2"}>
-                  {isUserEvent ? "Participant Feedback" : "Mood tracking"}
+                  {isUserEvent ? "Reflect & Results" : "Mood tracking"}
                 </h2>
-                <div className={`grid grid-cols-1 ${isUserEvent ? '' : 'md:grid-cols-2'} gap-8 items-start`}>
-                  {!isUserEvent && <MoodPicker eventId={event.id} variant="expanded" />}
-                  <MoodStatsBoard eventId={event.id} />
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 items-start`}>
+                  <div className="bg-gray-50 rounded-[32px] p-6 border border-gray-100">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-4 tracking-widest">Your Vibes</p>
+                    <MoodPicker eventId={event.id} variant="expanded" />
+                  </div>
+                  <div className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-4 tracking-widest">Community Mood</p>
+                    <MoodStatsBoard eventId={event.id} />
+                  </div>
                 </div>
               </>
             )}
@@ -285,48 +288,28 @@ export default function EventDetailsPage({ event, onBack, userData, isUserEvent,
           </div>
         </div>
 
-        {/* Action Button - Only show if it's NOT the user's own event */}
-        {!isUserEvent && (
-          <div className="flex justify-center items-center gap-4">
-            {isJoined && (
-              <motion.button
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => unjoinEvent(event.id)}
-                className="px-8 py-5 bg-gray-100 text-gray-500 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors"
-              >
-                Later
-              </motion.button>
-            )}
-            
-            {/* Show JoinButton if logged in, otherwise show login prompt */}
-            {isLoggedIn ? (
-              <JoinButton 
-                id={event.id} 
-                date={event.date}
-                time={event.time}
-                size="lg" 
-              />
-            ) : (
-              <motion.button
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  // Store the event ID to return to after login
-                  sessionStorage.setItem('pendingEventId', event.id.toString());
-                  onBack();
-                }}
-                className="px-8 py-5 bg-[#1D72FE] text-white rounded-full font-bold text-lg shadow-lg shadow-blue-200 hover:bg-blue-600 transition-colors"
-              >
-                Log in to Join
-              </motion.button>
-            )}
-          </div>
-        )}
+        {/* Action Button - Only show if it's NOT the user's own event or if we want to show Organizing state */}
+        <div className="flex justify-center items-center gap-4">
+          {(!isUserEvent && isJoined) && (
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => unjoinEvent(event.id)}
+              className="px-8 py-5 bg-gray-100 text-gray-500 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors"
+            >
+              Later
+            </motion.button>
+          )}
+          <JoinButton 
+            id={event.id} 
+            date={event.date}
+            time={event.time}
+            isCreator={isUserEvent}
+            size="lg" 
+          />
+        </div>
       </div>
       </div>
     </div>

@@ -6,12 +6,13 @@ import { TYPOGRAPHY } from '../styles/typography';
 
 interface LoginPageProps {
   onLogin: (data: { email: string; password?: string }) => void;
+  onSocialLogin?: (provider: 'google') => void;
   onBack: () => void;
   onSignUp: () => void;
   onForgotPassword: () => void;
 }
 
-export default function LoginPage({ onLogin, onBack, onSignUp, onForgotPassword }: LoginPageProps) {
+export default function LoginPage({ onLogin, onSocialLogin, onBack, onSignUp, onForgotPassword }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -87,13 +88,15 @@ export default function LoginPage({ onLogin, onBack, onSignUp, onForgotPassword 
                   onChange={(e) => setPassword(e.target.value)}
                   className={"w-full bg-gray-50 border-none rounded-[32px] py-5 pl-14 pr-14 text-gray-900 placeholder:text-gray-300 focus:ring-2 focus:ring-[#1371FF]/20 transition-all outline-none shadow-sm normal-case " + TYPOGRAPHY.body.replace('text-gray-500', '')}
                 />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+                {password && (
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-gray-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -116,25 +119,15 @@ export default function LoginPage({ onLogin, onBack, onSignUp, onForgotPassword 
 
         <div className="mt-12 text-center">
           <p className={TYPOGRAPHY.label + " mb-4"}>Or continue with</p>
-          <div className="flex justify-center gap-6">
+          <div className="flex justify-center">
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => onLogin({ email: "google.user@example.com" })}
+              onClick={() => onSocialLogin?.('google')}
               className="w-full max-w-[140px] h-14 rounded-2xl bg-gray-50 flex items-center justify-center gap-3 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
             >
               <div className="w-6 h-6 flex items-center justify-center bg-white rounded-full shadow-sm text-sm font-medium text-red-500">G</div>
               <span className={TYPOGRAPHY.h3 + " !text-gray-700 !text-sm"}>Google</span>
-            </motion.button>
-
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onLogin({ email: "fb.user@example.com" })}
-              className="w-full max-w-[140px] h-14 rounded-2xl bg-gray-50 flex items-center justify-center gap-3 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
-            >
-              <div className="w-6 h-6 flex items-center justify-center bg-blue-600 rounded-full shadow-sm text-sm font-medium text-white">f</div>
-              <span className={TYPOGRAPHY.h3 + " !text-gray-700 !text-sm"}>Facebook</span>
             </motion.button>
           </div>
         </div>
@@ -149,7 +142,7 @@ export default function LoginPage({ onLogin, onBack, onSignUp, onForgotPassword 
             <span>New to memory making?</span>
             <button 
               onClick={onSignUp} 
-              className={TYPOGRAPHY.labelEmphasis + " !font-black hover:underline underline-offset-4 text-xs"}
+              className={TYPOGRAPHY.labelEmphasis + " !font-black hover:underline underline-offset-4 text-s"}
             >
               Join Us
             </button>

@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { motion, useAnimation } from 'motion/react';
 import { Camera, ArrowRight, X, Maximize, Plus, Minus } from 'lucide-react';
 import { useJoin } from '../context/JoinContext';
-import { ALL_EVENTS } from '../data/events';
+import { auth } from '../lib/firebase';
 import { MOODS } from '../components/mood/MoodPicker';
 import { TYPOGRAPHY } from '../styles/typography';
 
@@ -13,7 +13,7 @@ interface SnapshotsGalleryPageProps {
 }
 
 export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapshotClick }: SnapshotsGalleryPageProps) {
-  const { joinedEventIds, userEvents, eventMoods } = useJoin();
+  const { isEventJoined, userEvents, eventMoods } = useJoin();
   const controls = useAnimation();
   const [zoom, setZoom] = useState(1);
 
@@ -39,19 +39,10 @@ export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapsho
   };
 
   const snapshots = useMemo(() => {
-    const joined = ALL_EVENTS.filter(e => joinedEventIds.has(e.id as number) && e.image);
-    const user = userEvents.filter(e => e.image);
-    
-    // Combine and deduplicate just in case
-    const combined = [...joined];
-    user.forEach(ue => {
-      if (!combined.some(c => c.id === ue.id)) {
-        combined.push(ue);
-      }
-    });
-
-    return combined;
-  }, [joinedEventIds, userEvents]);
+    return userEvents.filter(e => 
+      e.image && isEventJoined(e.id)
+    );
+  }, [userEvents, isEventJoined]);
 
   // Generate random positions for the scrapbook feel
   const scatteredPhotos = useMemo(() => {
@@ -60,7 +51,8 @@ export default function SnapshotsGalleryPage({ onBack, onDiscoverMore, onSnapsho
       const angle = (i / snapshots.length) * Math.PI * 2;
       const radius = 300 + Math.random() * 400; // Distance from center
       
-      const moodIdx = eventMoods[event.id.toString()];
+      const moodId = event.id.toString();
+      const moodIdx = eventMoods[moodId];
       const hasMood = moodIdx !== undefined && moodIdx !== -1;
 
       return {

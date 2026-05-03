@@ -19,9 +19,12 @@ import SnapshotsGalleryPage from './pages/SnapshotsGalleryPage';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { JoinProvider } from './context/JoinContext';
-
 import { useJoin } from './context/JoinContext';
-import { ALL_EVENTS } from './data/events';
+
+import { auth, db, googleProvider } from './lib/firebase';
+import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, query, where, collection, getDocs, limit } from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from './lib/firestoreUtils';
 
 export default function App() {
   return (
@@ -32,11 +35,14 @@ export default function App() {
 }
 
 function AppContent() {
-  const { userEvents, addUserEvent, updateUserEvent, removeUserEvent, joinEvent } = useJoin();
+  const { userEvents, addUserEvent, updateUserEvent, removeUserEvent } = useJoin();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthInProgress, setIsAuthInProgress] = useState(false);
+  const [prefilledEmail, setPrefilledEmail] = useState('');
   const [userData, setUserData] = useState<{
     name: string;
     username: string;
@@ -45,15 +51,44 @@ function AppContent() {
     profileImage?: string;
   } | null>(null);
 
-  // Persistence of registered users
-  const [registeredUsers, setRegisteredUsers] = useState<any[]>(() => {
-    const saved = localStorage.getItem('app_registered_users');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   useEffect(() => {
-    localStorage.setItem('app_registered_users', JSON.stringify(registeredUsers));
-  }, [registeredUsers]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const docRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserData({
+              name: data.name,
+              username: data.username,
+              email: data.email,
+              phone: data.phone || '',
+              profileImage: data.profileImage || user.photoURL || '',
+            });
+            setIsLoggedIn(true);
+            setIsSigningUp(false);
+            setIsLoggingIn(false);
+          } else {
+            // If authenticated but no record in Firestore, user needs to complete signup
+            setPrefilledEmail(user.email || '');
+            setIsLoggedIn(false);
+            setIsSigningUp(true);
+            setIsLoggingIn(false);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+        }
+      } else {
+        setUserData(null);
+        setIsLoggedIn(false);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedOrganizer, setSelectedOrganizer] = useState<any>(null);
@@ -65,23 +100,6 @@ function AppContent() {
   const [isSnapshotsGallery, setIsSnapshotsGallery] = useState(false);
   const [activeTab, setActiveTab] = useState<'activity' | 'joined' | 'self'>('activity');
 
-  // Handle shared event links (e.g., from ?event=1)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const eventId = params.get('event');
-    
-    if (eventId) {
-      // Find event in ALL_EVENTS or userEvents
-      const foundEvent = ALL_EVENTS.find(e => e.id === Number(eventId)) ||
-                        userEvents.find(e => e.id === Number(eventId));
-      if (foundEvent) {
-        setSelectedEvent(foundEvent);
-        // Clear URL params without refreshing
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, [userEvents]);
-
   const handleEventClick = (event: any, joined: boolean = false) => {
     setSelectedEvent(event);
     setIsCreatingEvent(false);
@@ -90,11 +108,8 @@ function AppContent() {
 
   const handleAddEvent = (newEvent: any) => {
     addUserEvent(newEvent);
-    // Also join the event so it appears in History
-    joinEvent(newEvent.id);
     setIsCreatingEvent(false);
-    // Go to History/Joined tab to see created events
-    setActiveTab('joined');
+    setIsEyeCatchingList(true);
   };
 
   const handleEditEvent = () => {
@@ -107,11 +122,17 @@ function AppContent() {
     setIsEditingEvent(false);
   };
 
-  const handleUpdateProfile = (newUserData: any) => {
-    setUserData(newUserData);
-    setIsEditingProfile(false);
-    // Update in registeredUsers as well
-    setRegisteredUsers(prev => prev.map(u => u.email === newUserData.email ? { ...u, ...newUserData } : u));
+  const handleUpdateProfile = async (newUserData: any) => {
+    if (!auth.currentUser) return;
+    
+      try {
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await setDoc(userRef, { ...newUserData, updatedAt: new Date().toISOString() }, { merge: true });
+        setUserData(newUserData);
+        setIsEditingProfile(false);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'users');
+      }
   };
 
   const handleDeleteEvent = (eventId: string | number) => {
@@ -152,19 +173,64 @@ function AppContent() {
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setActiveTab('activity');
-    setUserData(null);
-    // Reset other states
-    setSelectedEvent(null);
-    setIsEyeCatchingList(false);
-    setIsCreatingEvent(false);
-    setIsEditingEvent(false);
-    setIsEditingProfile(false);
-    setIsMoodHistory(false);
-    setIsSnapshotsGallery(false);
+  const getAuthErrorMessage = (code: string) => {
+    switch (code) {
+      case 'auth/invalid-email':
+        return 'Invalid email address. Please enter a valid email format (e.g., name@example.com).';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'auth/user-not-found':
+        return 'No account found with this email. Please sign up instead.';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again or reset your password.';
+      case 'auth/email-already-in-use':
+        return 'Already exist account';
+      case 'auth/weak-password':
+        return 'Password is too weak. It must be at least 6 characters long.';
+      case 'auth/popup-blocked':
+        return 'Login popup was blocked by your browser. Please allow popups for this site to continue.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your connection and try again.';
+      case 'auth/cancelled-popup-request':
+      case 'auth/popup-closed-by-user':
+        return null;
+      case 'auth/operation-not-allowed':
+        return "This sign-in method is not enabled. Please ensure 'Email/Password' and 'Google' are enabled in your Firebase Console (Authentication > Sign-in method).";
+      case 'auth/internal-error':
+        return 'An internal service error occurred. Please refresh the page and try again.';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Access to this account has been temporarily disabled. Please try again later.';
+      default:
+        return 'An unexpected error occurred. Please check your details and try again.';
+    }
   };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setIsLoggedIn(false);
+      setActiveTab('activity');
+      setUserData(null);
+      // Reset other states
+      setSelectedEvent(null);
+      setIsEyeCatchingList(false);
+      setIsCreatingEvent(false);
+      setIsEditingEvent(false);
+      setIsEditingProfile(false);
+      setIsMoodHistory(false);
+      setIsSnapshotsGallery(false);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-white font-sans selection:bg-blue-100 overflow-hidden">
@@ -201,52 +267,58 @@ function AppContent() {
                   transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                 >
                   <LoginPage 
-                    onLogin={(data) => {
-                      const user = registeredUsers.find(u => 
-                        (u.email === data.email || u.username === data.email) && 
-                        u.password === data.password
-                      );
-
-                      if (user) {
-                        setUserData(user);
-                        setIsLoggedIn(true);
-                        setIsLoggingIn(false);
-                        // Check if there's a pending event to return to
-                        const pendingEventId = sessionStorage.getItem('pendingEventId');
-                        if (pendingEventId) {
-                          sessionStorage.removeItem('pendingEventId');
-                          const pendingEvent = ALL_EVENTS.find(e => e.id === Number(pendingEventId)) ||
-                                              userEvents.find(e => e.id === Number(pendingEventId));
-                          if (pendingEvent) {
-                            setSelectedEvent(pendingEvent);
-                          }
-                        }
-                      } else {
-                        // Fallback/Simulate for demo if not found in registered
-                        const input = data.email;
-                        const derivedUsername = input.includes('@') ? input.split('@')[0] : input;
-                        const formattedName = derivedUsername.charAt(0).toUpperCase() + derivedUsername.slice(1);
+                    onLogin={async (data) => {
+                      if (isAuthInProgress) return;
+                      setIsAuthInProgress(true);
+                      try {
+                        let loginEmail = data.email;
                         
-                        setUserData({
-                          name: formattedName,
-                          username: derivedUsername.toLowerCase(),
-                          email: input.includes('@') ? input : `${derivedUsername}@example.com`,
-                          phone: "081-234-5678",
-                        });
-                        setIsLoggedIn(true);
-                        setIsLoggingIn(false);
-                        // Check if there's a pending event to return to
-                        const pendingEventId = sessionStorage.getItem('pendingEventId');
-                        if (pendingEventId) {
-                          sessionStorage.removeItem('pendingEventId');
-                          const pendingEvent = ALL_EVENTS.find(e => e.id === Number(pendingEventId)) ||
-                                              userEvents.find(e => e.id === Number(pendingEventId));
-                          if (pendingEvent) {
-                            setSelectedEvent(pendingEvent);
+                        // Check if it's a username (doesn't contain @)
+                        if (!loginEmail.includes('@')) {
+                          try {
+                            const usersRef = collection(db, 'users');
+                            const q = query(usersRef, where('username', '==', loginEmail), limit(1));
+                            const querySnapshot = await getDocs(q);
+                            
+                            if (!querySnapshot.empty) {
+                              loginEmail = querySnapshot.docs[0].data().email;
+                            } else {
+                              // If no user found by username, let Firebase throw its own error
+                              // but we can also manually suggest sign up
+                              alert("No account found with this username.");
+                              setIsAuthInProgress(false);
+                              return;
+                            }
+                          } catch (error) {
+                            handleFirestoreError(error, OperationType.GET, 'users');
                           }
                         }
+
+                        await signInWithEmailAndPassword(auth, loginEmail, data.password || '');
+                      } catch (error: any) {
+                        console.error("Login error:", error);
+                        const msg = getAuthErrorMessage(error.code);
+                        if (msg) alert(msg);
+                      } finally {
+                        setIsAuthInProgress(false);
                       }
                     }} 
+                    onSocialLogin={async (provider) => {
+                      if (isAuthInProgress) return;
+                      setIsAuthInProgress(true);
+                      try {
+                        const p = googleProvider;
+                        await signInWithPopup(auth, p);
+                      } catch (error: any) {
+                        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+                          console.error("Social login error:", error);
+                        }
+                        const msg = getAuthErrorMessage(error.code);
+                        if (msg) alert(msg);
+                      } finally {
+                        setIsAuthInProgress(false);
+                      }
+                    }}
                     onBack={() => setIsLoggingIn(false)}
                     onSignUp={() => {
                       setIsLoggingIn(false);
@@ -282,13 +354,72 @@ function AppContent() {
                   transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                 >
                   <SignUpPage 
-                    onSignUp={(data) => {
-                      setRegisteredUsers(prev => [...prev, data]);
-                      setUserData(data);
-                      setIsLoggedIn(true);
-                      setIsSigningUp(false);
+                    onSignUp={async (data) => {
+                      if (isAuthInProgress) return;
+                      setIsAuthInProgress(true);
+                      try {
+                        // 1. Check if email already exists in Firestore users collection
+                        // (Optional but good for explicit checking alongside Auth)
+                        const emailQuery = query(collection(db, 'users'), where('email', '==', data.email.toLowerCase()), limit(1));
+                        const emailSnap = await getDocs(emailQuery);
+                        if (!emailSnap.empty) {
+                          throw new Error("Already exist account");
+                        }
+
+                        // 2. Check if username already exists
+                        const usernameQuery = query(collection(db, 'users'), where('username', '==', data.username.toLowerCase()), limit(1));
+                        const usernameSnap = await getDocs(usernameQuery);
+                        if (!usernameSnap.empty) {
+                          throw new Error("Already exist account");
+                        }
+
+                        let uid = auth.currentUser?.uid;
+                        
+                        if (!uid && data.password) {
+                          // Manual signup
+                          const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+                          uid = userCredential.user.uid;
+                        }
+
+                        if (!uid) {
+                          alert("Session expired. Please try again.");
+                          setIsAuthInProgress(false);
+                          return;
+                        }
+
+                        const userRef = doc(db, 'users', uid);
+                        const cleanData = { 
+                          ...data, 
+                          email: data.email.toLowerCase(), 
+                          username: data.username.toLowerCase() 
+                        };
+                        delete (cleanData as any).password; 
+                        delete (cleanData as any).confirmPassword;
+
+                        await setDoc(userRef, {
+                          ...cleanData,
+                          uid: uid,
+                          registeredAt: new Date().toISOString()
+                        });
+                        
+                        setUserData(cleanData);
+                        setPrefilledEmail('');
+                        setIsLoggedIn(true);
+                        setIsSigningUp(false);
+                      } catch (error: any) {
+                        console.error("Signup error:", error);
+                        const authMsg = getAuthErrorMessage(error.code);
+                        const msg = (error.message === 'Already exist account') ? error.message : authMsg;
+                        if (msg) alert(msg);
+                      } finally {
+                        setIsAuthInProgress(false);
+                      }
                     }} 
-                    onBack={() => setIsSigningUp(false)}
+                    prefilledEmail={prefilledEmail}
+                    onBack={() => {
+                      setIsSigningUp(false);
+                      setPrefilledEmail('');
+                    }}
                   />
                 </motion.div>
               )}
@@ -356,10 +487,9 @@ function AppContent() {
                       event={selectedEvent} 
                       onBack={handleBack} 
                       userData={userData}
-                      isUserEvent={userEvents.some(e => e.id === selectedEvent.id)}
-                      isLoggedIn={isLoggedIn}
+                      isUserEvent={selectedEvent && selectedEvent.creatorId === auth.currentUser?.uid}
                       onOrganizerClick={(organizer) => {
-                        if (userEvents.some(e => e.id === selectedEvent.id)) {
+                        if (selectedEvent && selectedEvent.creatorId === auth.currentUser?.uid) {
                           handleTabChange('self');
                         } else {
                           setSelectedOrganizer(organizer);

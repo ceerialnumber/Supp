@@ -20,6 +20,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+@layer base {
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+}
+
 .perspective-1000 {
   perspective: 1000px;
 }

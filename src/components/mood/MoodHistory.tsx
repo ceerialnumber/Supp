@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Info } from 'lucide-react';
 import { useJoin } from '../../context/JoinContext';
-import { ALL_EVENTS } from '../../data/events';
 import MoodCard from './MoodCard';
 import { TYPOGRAPHY } from '../../styles/typography';
 
@@ -19,14 +18,11 @@ export default function MoodHistory({ selectedDay, monthIdx, onEventClick }: Moo
   const { eventMoods, userEvents } = useJoin();
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   
-  // Combine all possible events (predefined + user created)
-  const allEvents = [...ALL_EVENTS, ...userEvents];
-
   // Filter events that have a mood picked AND match the selected day/month
   const entry = useMemo(() => {
     if (!selectedDay) return null;
 
-    const matchedEvent = allEvents.find(e => {
+    const matchedEvent = userEvents.find(e => {
       const dateParts = e.date.split(' ');
       const mMatch = dateParts[1] === monthNames[monthIdx] || dateParts[1] === monthNames[monthIdx].substring(0, 3);
       return dateParts[0] === selectedDay.toString() && mMatch;
@@ -46,7 +42,7 @@ export default function MoodHistory({ selectedDay, monthIdx, onEventClick }: Moo
       event: matchedEvent.title,
       fullEvent: matchedEvent // Store the full event object for clicking
     };
-  }, [eventMoods, selectedDay, monthIdx, allEvents]);
+  }, [eventMoods, selectedDay, monthIdx, userEvents]);
 
   if (!entry) {
     return (

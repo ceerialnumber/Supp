@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "profileImage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "username", "email"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Event details",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string" },
+        "image": { "type": "string" },
+        "organizer": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "image": { "type": "string" },
+            "email": { "type": "string" }
+          }
+        },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "moodStats": {
+          "type": "array",
+          "items": { "type": "integer" }
+        }
+      },
+      "required": ["title", "date", "time", "creatorId"]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "User registration for an event",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "moodIdx": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "eventId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Public events"
+    },
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Event registrations"
+    }
+  }
+}

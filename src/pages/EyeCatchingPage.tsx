@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Clock, MapPin, ArrowUpDown, History, ArrowUp, ArrowDown } from 'lucide-react';
 import JoinButton from '../components/events/JoinButton';
 import SearchBar from '../components/ui/SearchBar';
 import { useJoin } from '../context/JoinContext';
+import { getEventIcon } from '../lib/eventUtils';
 import { 
   OutdoorIcon, 
   WorkoutIcon, 
@@ -12,8 +13,8 @@ import {
   ArtIcon, 
   FilmIcon, 
   MusicIcon 
-} from '../components/EventType';
-import { ALL_EVENTS } from '../data/events';
+} from '../components/events/EventType';
+import { auth } from '../lib/firebase';
 import { isFutureEvent, getEventDate, isOngoingToday } from '../lib/dateUtils';
 import { TYPOGRAPHY } from '../styles/typography';
 
@@ -31,25 +32,20 @@ const SORT_ICONS = [
   { id: 'music', Icon: MusicIcon, label: 'Music' },
 ];
 
-const VISIBLE_EVENTS = ALL_EVENTS;
-
 interface EyeCatchingPageProps {
   onEventClick: (event: any, joined?: boolean) => void;
   customEvents?: any[];
 }
 
 export default function EyeCatchingPage({ onEventClick, customEvents = [] }: EyeCatchingPageProps) {
-  const { isEventJoined } = useJoin();
+  const { isEventJoined, userEvents } = useJoin();
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const allBaseEvents = useMemo(() => {
-    return [...customEvents, ...ALL_EVENTS];
-  }, [customEvents]);
-
   const filteredAndSortedEvents = useMemo(() => {
-    let result = [...allBaseEvents];
+    let result = [...userEvents];
+    const isDefaultDiscover = !sortBy && !searchQuery.trim() && !dateSortOrder;
 
     if (sortBy === 'past') {
       result = result.filter(event => !isUpcoming(event.date));
@@ -66,8 +62,13 @@ export default function EyeCatchingPage({ onEventClick, customEvents = [] }: Eye
       const query = searchQuery.toLowerCase();
       result = result.filter(event => 
         event.title.toLowerCase().includes(query) || 
-        event.location.toLowerCase().includes(query)
+        (event.location && event.location.toLowerCase().includes(query))
       );
+    }
+
+    // If we are in default discovery mode, show a random subset of 8 events
+    if (isDefaultDiscover) {
+      return [...result].sort(() => 0.5 - Math.random()).slice(0, 8);
     }
 
     return result.sort((a, b) => {
@@ -79,7 +80,7 @@ export default function EyeCatchingPage({ onEventClick, customEvents = [] }: Eye
       // Default: sort by title
       return (a.title || '').localeCompare(b.title || '', 'en');
     });
-  }, [allBaseEvents, sortBy, searchQuery, dateSortOrder]);
+  }, [userEvents, sortBy, searchQuery, dateSortOrder]);
 
   const handleDateSortToggle = () => {
     setDateSortOrder(prev => {
@@ -206,14 +207,14 @@ export default function EyeCatchingPage({ onEventClick, customEvents = [] }: Eye
                   />
                   <div className="absolute top-4 left-4">
                     <div className="bg-white/90 backdrop-blur-md rounded-2xl p-2 shadow-sm">
-                      <event.Icon size={20} className="!w-8 !h-8" noBackground noShadow />
+                      {React.createElement(event.Icon || getEventIcon(event.type), { size: 20, className: "!w-8 !h-8", noBackground: true, noShadow: true } as any)}
                     </div>
                   </div>
                 </div>
 
                 {/* Content Section */}
                 <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="text-xl font-black text-gray-900 mb-1 leading-tight group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-xl font-black text-gray-900 mb-1 leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">
                     {event.title}
                   </h3>
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3">
@@ -233,7 +234,7 @@ export default function EyeCatchingPage({ onEventClick, customEvents = [] }: Eye
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium min-w-0">
                       <MapPin size={14} className="text-blue-500 flex-shrink-0" />
-                      <span className="truncate">{event.location}</span>
+                      <span className="line-clamp-2">{event.location}</span>
                     </div>
                   </div>
 
@@ -241,21 +242,20 @@ export default function EyeCatchingPage({ onEventClick, customEvents = [] }: Eye
                     {event.description}
                   </p>
 
-                  {!customEvents.some(ce => ce.id === event.id) && (
-                    <JoinButton 
-                      id={event.id}
-                      date={event.date}
-                      time={event.time}
-                      variant="full"
-                      onStateChange={(isJoined) => {
-                        if (isJoined) {
-                          setTimeout(() => {
-                            handleRedirect(event);
-                          }, 400);
-                        }
-                      }}
-                    />
-                  )}
+                  <JoinButton 
+                    id={event.id}
+                    date={event.date}
+                    time={event.time}
+                    variant="full"
+                    isCreator={event.creatorId === auth.currentUser?.uid}
+                    onStateChange={(isJoined) => {
+                      if (isJoined) {
+                        setTimeout(() => {
+                          handleRedirect(event);
+                        }, 400);
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </motion.div>

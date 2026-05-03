@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Camera } from 'lucide-react';
 import { useJoin } from '../../context/JoinContext';
-import { ALL_EVENTS } from '../../data/events';
+import { auth } from '../../lib/firebase';
 import { MOODS } from '../mood/MoodPicker';
 import { TYPOGRAPHY } from '../../styles/typography';
 
@@ -27,19 +27,19 @@ interface SnapshotItem {
 }
 
 export default function Snapshots({ showHeader = true, onHeaderClick, onSnapshotClick, showStats = true }: SnapshotsProps) {
-  const { joinedEventIds, userEvents, eventMoods } = useJoin();
+  const { userEvents, eventMoods, isEventJoined } = useJoin();
 
   const allSnapshots = useMemo(() => {
     const combined: SnapshotItem[] = [];
     
-    // Add joined event images if they exist
-    ALL_EVENTS.forEach((event) => {
-      if (joinedEventIds.has(event.id)) {
+    // Use userEvents and filter for involvements
+    userEvents.forEach((event) => {
+      if (event.image && isEventJoined(event.id)) {
         const moodIdx = eventMoods[event.id.toString()];
         const hasMood = moodIdx !== undefined && moodIdx !== -1;
-        
+
         combined.push({
-          id: `e${event.id}`,
+          id: `${event.id}`,
           image: event.image,
           rotate: Math.floor(Math.random() * 10) - 5,
           icon: hasMood ? MOODS[moodIdx].icon : null,
@@ -50,24 +50,8 @@ export default function Snapshots({ showHeader = true, onHeaderClick, onSnapshot
       }
     });
 
-    // Add user created event images
-    userEvents.forEach((event) => {
-      const moodIdx = eventMoods[event.id.toString()];
-      const hasMood = moodIdx !== undefined && moodIdx !== -1;
-
-      combined.push({
-        id: `u${event.id}`,
-        image: event.image,
-        rotate: Math.floor(Math.random() * 10) - 5,
-        icon: hasMood ? MOODS[moodIdx].icon : null,
-        iconColor: hasMood ? 'text-white' : '',
-        bgColor: hasMood ? MOODS[moodIdx].bgColor : '',
-        event: event
-      });
-    });
-
     return combined;
-  }, [joinedEventIds, userEvents, eventMoods]);
+  }, [userEvents, eventMoods, isEventJoined]);
 
   if (allSnapshots.length === 0) {
     return (

@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft as ArrowLeftIcon, ChevronRight as ArrowRightIcon, ChevronRight } from 'lucide-react';
 import { useJoin } from '../../context/JoinContext';
-import { ALL_EVENTS } from '../../data/events';
 import MoodHistory from './MoodHistory';
 import { TYPOGRAPHY } from '../../styles/typography';
 
@@ -41,12 +40,11 @@ export default function MoodTracker({ onSeeHistory, onEventClick }: MoodTrackerP
 
   const calendarMoods = useMemo(() => {
     const moods: Record<number, string> = {};
-    const allEvents = [...ALL_EVENTS, ...userEvents];
 
     Object.entries(eventMoods).forEach(([eventId, moodIdx]) => {
       if (moodIdx === undefined || moodIdx === -1) return;
 
-      const event = allEvents.find(e => e.id.toString() === eventId);
+      const event = userEvents.find(e => e.id.toString() === eventId);
       if (!event) return;
 
       const dateParts = event.date.split(' ');

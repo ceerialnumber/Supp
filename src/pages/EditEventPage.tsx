@@ -22,8 +22,9 @@ import {
   FilmIcon, 
   MusicIcon,
   LearningIcon
-} from '../components/EventType';
+} from '../components/events/EventType';
 import LocationPickerMap from '../components/events/LocationPickerMap';
+import { compressImage } from '../lib/imageUtils';
 
 import { TYPOGRAPHY } from '../styles/typography';
 
@@ -54,9 +55,25 @@ interface EditEventPageProps {
 export default function EditEventPage({ event, onSubmit, onDelete, onBack, userData }: EditEventPageProps) {
   const [title, setTitle] = useState(event.title || '');
   const [location, setLocation] = useState((event.location || '').replace('@', ''));
+  const [debouncedLocation, setDebouncedLocation] = useState('');
   const [description, setDescription] = useState(event.description || '');
   const [selectedType, setSelectedType] = useState(event.type || 'party');
   const [showCalendar, setShowCalendar] = useState(false);
+  
+  // Debounce location input for map search
+  useEffect(() => {
+    if (!location.trim()) {
+      setDebouncedLocation('');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedLocation(location);
+    }, 1000); // 1 second delay
+
+    return () => clearTimeout(timer);
+  }, [location]);
+
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -97,43 +114,38 @@ export default function EditEventPage({ event, onSubmit, onDelete, onBack, userD
     if (!file) return;
 
     setIsUploading(true);
+    try {
+      // 1. Read file as base64
+      const base64: string = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
 
-    // For production (Vercel), convert to base64 instead of using API
-    const isProduction = import.meta.env.PROD;
+      // 2. Compress image
+      const compressed = await compressImage(base64, 1024, 1024, 0.7);
 
-    if (isProduction) {
-      // Convert to base64 for Vercel deployment
-      const reader = new FileReader();
-      reader.onload = () => {
-        setUploadedImage(reader.result as string);
-        setIsUploading(false);
-      };
-      reader.onerror = () => {
-        alert('Failed to upload image. Please try again.');
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // For development, use the API
+      // 3. Convert back to blob
+      const fetchRes = await fetch(compressed);
+      const blob = await fetchRes.blob();
+
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', blob, 'event-image.jpg');
 
-      try {
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) throw new Error('Upload failed');
 
-        const data = await response.json();
-        setUploadedImage(data.url);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Failed to upload image. Please try again.');
-      } finally {
-        setIsUploading(false);
-      }
+      const data = await response.json();
+      setUploadedImage(data.url);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -416,7 +428,10 @@ export default function EditEventPage({ event, onSubmit, onDelete, onBack, userD
         <div className="mb-8">
           <label className={TYPOGRAPHY.formLabel}>Where?</label>
           <div className="mb-4">
-            <LocationPickerMap onLocationSelect={(address) => setLocation(address)} />
+            <LocationPickerMap 
+              searchQuery={debouncedLocation}
+              onLocationSelect={(address) => setLocation(address)} 
+            />
           </div>
           <div className="relative">
             <input 
@@ -463,7 +478,8 @@ export default function EditEventPage({ event, onSubmit, onDelete, onBack, userD
           <motion.button
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
             onClick={handleSave}
-            className="flex-[4] bg-blue-600 text-white rounded-full py-6 flex items-center justify-center gap-3 shadow-xl shadow-blue-200"
+            disabled={isUploading}
+            className="flex-[4] bg-blue-600 text-white rounded-full py-6 flex items-center justify-center gap-3 shadow-xl shadow-blue-200 disabled:opacity-50"
           >
             <Save className="w-6 h-6" />
             <span className="text-xl font-bold">Done</span>

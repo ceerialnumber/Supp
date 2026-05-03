@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
-import { User, Phone, Mail, Camera, ArrowLeft, Check } from 'lucide-react';
+import { User, Phone, Mail, Camera, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { TYPOGRAPHY } from '../styles/typography';
+import { compressImage } from '../lib/imageUtils';
 
 interface EditProfilePageProps {
   userData: {
@@ -23,16 +24,44 @@ export default function EditProfilePage({ userData, onSave, onBack }: EditProfil
     phone: userData?.phone || '',
   });
   const [profileImage, setProfileImage] = useState<string | null>(userData?.profileImage || null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const reader = new FileReader();
+        const base64: string = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+
+        // Compress image before upload
+        const compressed = await compressImage(base64, 400, 400, 0.7);
+        
+        // Convert base64 to Blob
+        const fetchRes = await fetch(compressed);
+        const blob = await fetchRes.blob();
+        
+        const formData = new FormData();
+        formData.append('image', blob, 'profile.jpg');
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+        const data = await response.json();
+        setProfileImage(data.url);
+      } catch (err: any) {
+        console.error("Upload error:", err);
+        alert("Failed to upload image. Please try again.");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -57,12 +86,18 @@ export default function EditProfilePage({ userData, onSave, onBack }: EditProfil
               <img 
                 src={profileImage || "/images/User.jpg"} 
                 alt="Profile" 
-                className="w-full h-full object-cover" 
+                className={`w-full h-full object-cover ${isUploading ? 'opacity-30' : 'opacity-100'}`} 
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <Camera className="w-8 h-8 text-white" />
-              </div>
+              {isUploading ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                </div>
+              ) : (
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <Camera className="w-8 h-8 text-white" />
+                </div>
+              )}
             </div>
             <input 
               type="file" 

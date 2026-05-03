@@ -22,6 +22,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface LocationPickerMapProps {
   onLocationSelect: (address: string) => void;
   initialCenter?: [number, number];
+  searchQuery?: string;
 }
 
 function MapEvents({ onLocationClick }: { onLocationClick: (lat: number, lng: number) => void }) {
@@ -36,14 +37,40 @@ function MapEvents({ onLocationClick }: { onLocationClick: (lat: number, lng: nu
 function ChangeView({ center }: { center: [number, number] }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, map.getZoom());
+    map.setView(center, 16); // Zoom in when center changes
   }, [center, map]);
   return null;
 }
 
-export default function LocationPickerMap({ onLocationSelect, initialCenter = [13.7367, 100.5231] }: LocationPickerMapProps) {
+export default function LocationPickerMap({ onLocationSelect, initialCenter = [13.7367, 100.5231], searchQuery }: LocationPickerMapProps) {
   const [position, setPosition] = useState<[number, number]>(initialCenter);
   const [loading, setLoading] = useState(false);
+
+  // Forward geocoding: Search for address string to get coordinates
+  useEffect(() => {
+    if (!searchQuery?.trim()) return;
+
+    const performSearch = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
+        if (!response.ok) throw new Error('Search failed');
+        
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const { lat, lon } = data[0];
+          const newPos: [number, number] = [parseFloat(lat), parseFloat(lon)];
+          setPosition(newPos);
+        }
+      } catch (error) {
+        console.error('Error searching location:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    performSearch();
+  }, [searchQuery]);
 
   const fetchAddress = async (lat: number, lng: number) => {
     setLoading(true);

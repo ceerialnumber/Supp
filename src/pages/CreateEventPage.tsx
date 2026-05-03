@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent } from 'react';
+import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, ChevronLeft, ChevronRight, X, Loader2, MapPin } from 'lucide-react';
 import { 
@@ -22,8 +22,9 @@ import {
   FilmIcon, 
   MusicIcon,
   LearningIcon
-} from '../components/EventType';
+} from '../components/events/EventType';
 import LocationPickerMap from '../components/events/LocationPickerMap';
+import { compressImage } from '../lib/imageUtils';
 
 import { TYPOGRAPHY } from '../styles/typography';
 
@@ -51,9 +52,25 @@ interface CreateEventPageProps {
 export default function CreateEventPage({ onSubmit, userData }: CreateEventPageProps) {
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
+  const [debouncedLocation, setDebouncedLocation] = useState('');
   const [description, setDescription] = useState('');
   const [selectedType, setSelectedType] = useState('party');
   const [showCalendar, setShowCalendar] = useState(false);
+
+  // Debounce location input for map search
+  useEffect(() => {
+    if (!location.trim()) {
+      setDebouncedLocation('');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedLocation(location);
+    }, 1000); // 1 second delay as requested
+
+    return () => clearTimeout(timer);
+  }, [location]);
+
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -70,43 +87,38 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
     if (!file) return;
 
     setIsUploading(true);
+    try {
+      // 1. Read file as base64
+      const base64: string = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
 
-    // For production (Vercel), convert to base64 instead of using API
-    const isProduction = import.meta.env.PROD;
+      // 2. Compress image
+      const compressed = await compressImage(base64, 1024, 1024, 0.7); // Better resolution for event covers
 
-    if (isProduction) {
-      // Convert to base64 for Vercel deployment
-      const reader = new FileReader();
-      reader.onload = () => {
-        setUploadedImage(reader.result as string);
-        setIsUploading(false);
-      };
-      reader.onerror = () => {
-        alert('Failed to upload image. Please try again.');
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // For development, use the API
+      // 3. Convert back to blob for multipart upload
+      const fetchRes = await fetch(compressed);
+      const blob = await fetchRes.blob();
+
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', blob, 'event-image.jpg');
 
-      try {
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) throw new Error('Upload failed');
 
-        const data = await response.json();
-        setUploadedImage(data.url);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Failed to upload image. Please try again.');
-      } finally {
-        setIsUploading(false);
-      }
+      const data = await response.json();
+      setUploadedImage(data.url);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -291,14 +303,14 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
           ) : isUploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-              <span className={TYPOGRAPHY.h3}>Uploading...</span>
+              <span className={TYPOGRAPHY.labelEmphasis}>Uploading...</span>
             </div>
           ) : (
             <>
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4 text-[#1D72FE]">
                 <Plus className="w-8 h-8" />
               </div>
-              <span className={TYPOGRAPHY.h3}>add pic</span>
+              <span className={TYPOGRAPHY.labelEmphasis}>add pic</span>
             </>
           )}
 
@@ -418,7 +430,10 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
         <div className="mb-8">
           <label className={TYPOGRAPHY.formLabel}>Where?</label>
           <div className="mb-4">
-            <LocationPickerMap onLocationSelect={(address) => setLocation(address)} />
+            <LocationPickerMap 
+              searchQuery={debouncedLocation}
+              onLocationSelect={(address) => setLocation(address)} 
+            />
           </div>
           <div className="relative">
             <input 
@@ -473,7 +488,8 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
-            className="w-full max-w-md bg-[#1D72FE] text-white rounded-full py-6 flex items-center justify-center gap-3 shadow-xl shadow-blue-200"
+            disabled={isUploading}
+            className="w-full max-w-md bg-[#1D72FE] text-white rounded-full py-6 flex items-center justify-center gap-3 shadow-xl shadow-blue-200 disabled:opacity-50"
           >
             <Plus className="w-6 h-6 stroke-[3px]" />
             <span className="text-xl font-semibold">Create Event</span>

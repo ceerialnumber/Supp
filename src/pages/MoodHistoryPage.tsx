@@ -2,7 +2,6 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useJoin } from '../context/JoinContext';
-import { ALL_EVENTS } from '../data/events';
 import MoodCard from '../components/mood/MoodCard';
 import MoodSummary from '../components/mood/MoodSummary';
 import { TYPOGRAPHY } from '../styles/typography';
@@ -27,7 +26,6 @@ interface MoodHistoryPageProps {
 
 export default function MoodHistoryPage({ onBack, onEventClick }: MoodHistoryPageProps) {
   const { eventMoods, userEvents } = useJoin();
-  const allEvents = [...ALL_EVENTS, ...userEvents];
 
   // Initialize to April 2026 (based on current metadata)
   const [selectedMonth, setSelectedMonth] = useState(3); // 0-indexed, 3 = April
@@ -39,7 +37,7 @@ export default function MoodHistoryPage({ onBack, onEventClick }: MoodHistoryPag
     return Object.entries(eventMoods)
       .filter(([_, moodIdx]) => moodIdx !== undefined && moodIdx !== -1)
       .map(([eventId, moodIdx]) => {
-        const event = allEvents.find(e => e.id.toString() === eventId);
+        const event = userEvents.find(e => e.id.toString() === eventId);
         if (!event) return null;
         
         const moodKey = INDEX_TO_MOOD_KEY[moodIdx as number];
@@ -62,7 +60,7 @@ export default function MoodHistoryPage({ onBack, onEventClick }: MoodHistoryPag
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null);
-  }, [eventMoods, allEvents]);
+  }, [eventMoods, userEvents]);
 
   const allStats = useMemo(() => {
     const counts = [0, 0, 0, 0, 0];

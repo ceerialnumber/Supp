@@ -3,7 +3,7 @@ export const TYPOGRAPHY = {
   h1: "text-[28px] font-bold text-blue-600 uppercase leading-[0.9] tracking-[-0.02em]",
   
   // Section headers (like "Mood Tracker", "Your Feedback")
-  h2: "text-lg font-bold uppercase leading-none text-gray-900 ",
+  h2: "text-lg font-bold uppercase leading-none text-gray-900 tracking-tight",
   
   // Sub-headers or card titles
   h3: "text-base font-bold uppercase text-gray-900 leading-tight",

@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ALL_EVENTS } from '../data/events';
 import { isUpcoming } from '../lib/dateUtils';
+import { db, auth } from '../lib/firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  query, 
+  where,
+  getDocs
+} from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from '../lib/firestoreUtils';
 
 interface JoinContextType {
   joinedEventIds: Set<string | number>;
@@ -24,96 +36,144 @@ export function JoinProvider({ children }: { children: React.ReactNode }) {
   const [joinedEventIds, setJoinedEventIds] = useState<Set<string | number>>(new Set());
   const [eventMoods, setEventMoods] = useState<Record<string, number>>({});
   const [userEvents, setUserEvents] = useState<any[]>([]);
+  const [dbEvents, setDbEvents] = useState<any[]>([]);
 
-  // Load from localStorage on mount
+  // Load from Firestore on mount if authenticated
   useEffect(() => {
-    const savedJoined = localStorage.getItem('joinedEvents');
-    if (savedJoined) {
-      try {
-        const parsed = JSON.parse(savedJoined);
-        setJoinedEventIds(new Set(parsed));
-      } catch (e) {
-        console.error('Failed to parse joined events', e);
-      }
-    } else {
-      // Pre-seed some joined events for demo
-      setJoinedEventIds(new Set([1, 2, 'e1', 'e2', 'e5', 'e7', 'e9']));
-    }
+    let unsubscribeEvents: (() => void) | null = null;
+    let unsubscribeRegs: (() => void) | null = null;
 
-    const savedMoods = localStorage.getItem('eventMoods');
-    if (savedMoods) {
-      try {
-        setEventMoods(JSON.parse(savedMoods));
-      } catch (e) {
-        console.error('Failed to parse event moods', e);
+    const unsubscribeAuth = auth.onAuthStateChanged(user => {
+      // 1. Clean up existing listeners immediately
+      if (unsubscribeEvents) {
+        unsubscribeEvents();
+        unsubscribeEvents = null;
       }
-    } else {
-      // Pre-seed some moods
-      setEventMoods({
-        '1': 0, // Excited
-        '2': 2, // Calm
-        'e1': 1, // Happy
-        'e2': 3, // Tired
-        'e5': 1,
-        'e7': 2,
-        'e9': 0
-      });
-    }
+      if (unsubscribeRegs) {
+        unsubscribeRegs();
+        unsubscribeRegs = null;
+      }
 
-    const savedUserEvents = localStorage.getItem('user_created_events');
-    if (savedUserEvents) {
-      try {
-        setUserEvents(JSON.parse(savedUserEvents));
-      } catch (e) {
-        console.error('Failed to parse user events', e);
+      if (user) {
+        // 2. Fetch ALL events from database to show in global lists
+        const eventsRef = collection(db, 'events');
+        unsubscribeEvents = onSnapshot(eventsRef, 
+          (snapshot) => {
+            const events = snapshot.docs.map(doc => ({
+              ...doc.data(),
+              id: doc.id
+            }));
+            setDbEvents(events);
+          },
+          (error) => {
+            // Only handle error if we are still supposed to be logged in
+            if (auth.currentUser) {
+              handleFirestoreError(error, OperationType.GET, 'events');
+            }
+          }
+        );
+
+        // 3. Fetch user's registrations (joined events)
+        const registrationsRef = collection(db, 'registrations');
+        const q = query(registrationsRef, where('userId', '==', user.uid));
+        unsubscribeRegs = onSnapshot(q,
+          (snapshot) => {
+            const joinedIds = new Set<string | number>();
+            const moods: Record<string, number> = {};
+            snapshot.docs.forEach(doc => {
+              const data = doc.data();
+              joinedIds.add(data.eventId);
+              if (data.moodIdx !== undefined) {
+                moods[data.eventId] = data.moodIdx;
+              }
+            });
+            setJoinedEventIds(joinedIds);
+            setEventMoods(moods);
+          },
+          (error) => {
+            if (auth.currentUser) {
+              handleFirestoreError(error, OperationType.GET, 'registrations');
+            }
+          }
+        );
+      } else {
+        setDbEvents([]);
+        setJoinedEventIds(new Set());
+        setEventMoods({});
       }
-    }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeEvents) unsubscribeEvents();
+      if (unsubscribeRegs) unsubscribeRegs();
+    };
   }, []);
 
-  // Save to localStorage on change
-  useEffect(() => {
-    localStorage.setItem('joinedEvents', JSON.stringify(Array.from(joinedEventIds)));
-  }, [joinedEventIds]);
+  // For display, combine hardcoded and DB events
+  const combinedAllEvents = [...dbEvents, ...ALL_EVENTS];
 
-  useEffect(() => {
-    localStorage.setItem('eventMoods', JSON.stringify(eventMoods));
-  }, [eventMoods]);
-
-  useEffect(() => {
-    localStorage.setItem('user_created_events', JSON.stringify(userEvents));
-  }, [userEvents]);
-
-  const joinEvent = (id: string | number) => {
-    setJoinedEventIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
+  const joinEvent = async (id: string | number) => {
+    if (!auth.currentUser) return;
+    const userId = auth.currentUser.uid;
+    const regId = `${userId}_${id}`;
+    const regRef = doc(db, 'registrations', regId);
+    
+    try {
+      await setDoc(regRef, {
+        userId,
+        eventId: id,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'registrations');
+    }
   };
 
-  const unjoinEvent = (id: string | number) => {
-    setJoinedEventIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    // Also clear the mood when unjoining
-    setEventMoods((prev) => {
-      const next = { ...prev };
-      delete next[id.toString()];
-      return next;
-    });
+  const unjoinEvent = async (id: string | number) => {
+    if (!auth.currentUser) return;
+    const userId = auth.currentUser.uid;
+    const regId = `${userId}_${id}`;
+    const regRef = doc(db, 'registrations', regId);
+    
+    try {
+      await deleteDoc(regRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'registrations');
+    }
   };
 
   const isEventJoined = (id: string | number) => {
-    return joinedEventIds.has(id);
+    const idStr = String(id);
+    const isJoined = Array.from(joinedEventIds).some(jid => String(jid) === idStr);
+    const event = combinedAllEvents.find(e => String(e.id) === idStr);
+    
+    // Check if current user is creator
+    const currentUserId = auth.currentUser?.uid;
+    const isCreator = event && event.creatorId === currentUserId;
+    
+    return !!(isJoined || isCreator);
   };
 
-  const setMood = (eventId: string | number, moodIdx: number) => {
-    setEventMoods((prev) => ({
-      ...prev,
-      [eventId.toString()]: prev[eventId.toString()] === moodIdx ? -1 : moodIdx
-    }));
+  const setMood = async (eventId: string | number, moodIdx: number) => {
+    if (!auth.currentUser) return;
+    const userId = auth.currentUser.uid;
+    const regId = `${userId}_${eventId}`;
+    const regRef = doc(db, 'registrations', regId);
+
+    const currentMood = eventMoods[eventId.toString()];
+    const newMood = currentMood === moodIdx ? -1 : moodIdx;
+
+    try {
+      await setDoc(regRef, {
+        userId,
+        eventId,
+        moodIdx: newMood,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'registrations');
+    }
   };
 
   const getEventParticipantCount = (eventId: string | number) => {
@@ -161,9 +221,10 @@ export function JoinProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getOrganizerMoodStats = (organizerEmail: string) => {
+    const currentUserId = auth.currentUser?.uid;
     // Collect all events by this organizer that have already happened or are happening
-    const organizerEvents = [...ALL_EVENTS, ...userEvents].filter(
-      e => e.organizer?.email === organizerEmail && !isUpcoming(e.date, e.time)
+    const organizerEvents = combinedAllEvents.filter(
+      e => (e.organizer?.email === organizerEmail || (e.creatorId === currentUserId && currentUserId)) && !isUpcoming(e.date, e.time)
     );
     
     // Sum up the mood stats for all these events
@@ -179,16 +240,52 @@ export function JoinProvider({ children }: { children: React.ReactNode }) {
     return aggregateStats;
   };
 
-  const addUserEvent = (event: any) => {
-    setUserEvents(prev => [event, ...prev]);
+  const sanitizeEvent = (event: any) => {
+    const sanitized = { ...event };
+    // Remove fields that can't be stored in Firestore (like React components)
+    if (sanitized.Icon) delete sanitized.Icon;
+    return sanitized;
   };
 
-  const updateUserEvent = (updatedEvent: any) => {
-    setUserEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+  const addUserEvent = async (event: any) => {
+    if (!auth.currentUser) return;
+    const eventRef = doc(collection(db, 'events'));
+    const sanitizedEvent = sanitizeEvent(event);
+    const eventWithCreator = {
+      ...sanitizedEvent,
+      id: eventRef.id,
+      creatorId: auth.currentUser.uid,
+      createdAt: new Date().toISOString()
+    };
+    
+    try {
+      await setDoc(eventRef, eventWithCreator);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'events');
+    }
   };
 
-  const removeUserEvent = (id: string | number) => {
-    setUserEvents(prev => prev.filter(e => e.id !== id));
+  const updateUserEvent = async (updatedEvent: any) => {
+    if (!auth.currentUser) return;
+    const eventRef = doc(db, 'events', updatedEvent.id.toString());
+    const sanitizedEvent = sanitizeEvent(updatedEvent);
+    
+    try {
+      await setDoc(eventRef, sanitizedEvent, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'events');
+    }
+  };
+
+  const removeUserEvent = async (id: string | number) => {
+    if (!auth.currentUser) return;
+    const eventRef = doc(db, 'events', id.toString());
+    
+    try {
+      await deleteDoc(eventRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'events');
+    }
   };
 
   return (
@@ -202,7 +299,7 @@ export function JoinProvider({ children }: { children: React.ReactNode }) {
       getEventMoodStats,
       getEventParticipantCount,
       getOrganizerMoodStats,
-      userEvents,
+      userEvents: combinedAllEvents,
       addUserEvent,
       updateUserEvent,
       removeUserEvent

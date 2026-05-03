@@ -6,7 +6,7 @@ import MoodPicker from '../components/mood/MoodPicker';
 import MoodStatsBoard from '../components/mood/MoodStatsBoard';
 import Countdown from '../components/events/Countdown';
 import { useJoin } from '../context/JoinContext';
-import { ALL_EVENTS } from '../data/events';
+import { auth } from '../lib/firebase';
 import SearchBar from '../components/ui/SearchBar';
 import HistoryEventCard from '../components/events/HistoryEventCard';
 import { isUpcoming, getEventDate } from '../lib/dateUtils';
@@ -19,7 +19,7 @@ interface JoinedEventsPageProps {
 }
 
 export default function JoinedEventsPage({ onEventClick, customEvents = [], userData }: JoinedEventsPageProps) {
-  const { isEventJoined, eventMoods } = useJoin();
+  const { isEventJoined, eventMoods, userEvents } = useJoin();
   const [viewTab, setViewTab] = useState<'joined' | 'created'>('joined');
   const [sortBy, setSortBy] = useState<'title' | 'date' | 'upcoming' | 'done' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,7 +32,7 @@ export default function JoinedEventsPage({ onEventClick, customEvents = [], user
       const query = searchQuery.toLowerCase();
       result = result.filter(event => 
         event.title.toLowerCase().includes(query) || 
-        event.location.toLowerCase().includes(query)
+        (event.location && event.location.toLowerCase().includes(query))
       );
     }
 
@@ -78,13 +78,22 @@ export default function JoinedEventsPage({ onEventClick, customEvents = [], user
   };
 
   const joinedEvents = useMemo(() => {
-    const joined = ALL_EVENTS.filter(event => isEventJoined(event.id));
+    const joined = userEvents.filter(event => isEventJoined(event.id));
     return filteredAndSortedEvents(joined);
-  }, [isEventJoined, sortBy, searchQuery]);
+  }, [userEvents, isEventJoined, sortBy, searchQuery]);
 
   const createdEvents = useMemo(() => {
-    return filteredAndSortedEvents(customEvents);
-  }, [customEvents, sortBy, searchQuery]);
+    // Filter events created by the current user (using their email or ID if available)
+    const currentUserId = auth.currentUser?.uid;
+    const currentUserEmail = userData?.email;
+    
+    const created = userEvents.filter(event => 
+      event.creatorId === currentUserId || 
+      (event.organizer?.email && event.organizer?.email === currentUserEmail)
+    );
+    
+    return filteredAndSortedEvents(created);
+  }, [userEvents, userData, sortBy, searchQuery]);
 
   const currentEvents = viewTab === 'joined' ? joinedEvents : createdEvents;
 

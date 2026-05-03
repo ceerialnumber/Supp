@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { useJoin } from '../../context/JoinContext';
-import { ALL_EVENTS } from '../../data/events';
 import { 
   Wine, 
   Dumbbell, 
   Sun, 
   Palette, 
-  BookOpen 
+  BookOpen,
+  Film,
+  Music
 } from 'lucide-react';
 
 interface StatConfig {
@@ -21,10 +22,12 @@ const STATS_CONFIG: StatConfig[] = [
   { type: 'outdoor', color: 'bg-[#4ADE80]', icon: Sun },
   { type: 'art', color: 'bg-[#A855F7]', icon: Palette },
   { type: 'learning', color: 'bg-[#FACC15]', icon: BookOpen },
+  { type: 'film', color: 'bg-[#EF4444]', icon: Film },
+  { type: 'music', color: 'bg-[#EC4899]', icon: Music },
 ];
 
 export default function StatsBar() {
-  const { joinedEventIds, userEvents } = useJoin();
+  const { isEventJoined, userEvents } = useJoin();
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -32,16 +35,12 @@ export default function StatsBar() {
     // Initialize counts
     STATS_CONFIG.forEach(config => counts[config.type] = 0);
 
-    // Count joined events
-    ALL_EVENTS.forEach(event => {
-      if (joinedEventIds.has(event.id)) {
+    // Count events (both hardcoded and custom) if they are joined or created by user
+    userEvents.forEach(event => {
+      // isEventJoined returns true if the user joined the event OR if they created it
+      if (isEventJoined(event.id)) {
         counts[event.type] = (counts[event.type] || 0) + 1;
       }
-    });
-
-    // Count user created events
-    userEvents.forEach(event => {
-      counts[event.type] = (counts[event.type] || 0) + 1;
     });
 
     const total = Object.values(counts).reduce((acc, curr) => acc + curr, 0);
@@ -54,7 +53,7 @@ export default function StatsBar() {
       })).filter(item => item.count > 0),
       total
     };
-  }, [joinedEventIds, userEvents]);
+  }, [isEventJoined, userEvents]);
 
   if (stats.total === 0) return null;
 

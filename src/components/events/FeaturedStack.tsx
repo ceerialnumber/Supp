@@ -1,23 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import JoinButton from './JoinButton';
-import { ALL_EVENTS } from '../../data/events';
-
-const FEATURED_EVENTS = ALL_EVENTS.filter(e => {
-  const parts = e.date.split(' ');
-  if (parts.length < 3) return true;
-  const MONTH_MAP: Record<string, number> = {
-    'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-    'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
-    'January': 0, 'February': 1, 'March': 2, 'April': 3, 'June': 5,
-    'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
-  };
-  const eventDate = new Date(parseInt(parts[2]), MONTH_MAP[parts[1]] || 0, parseInt(parts[0]));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return eventDate >= today;
-}).slice(0, 5);
+import { useJoin } from '../../context/JoinContext';
 
 interface FeaturedStackProps {
   onEventClick: (event: any, joined?: boolean) => void;
@@ -25,7 +9,31 @@ interface FeaturedStackProps {
 }
 
 export default function FeaturedStack({ onEventClick, onSeeMore }: FeaturedStackProps) {
-  const [cards, setCards] = useState(FEATURED_EVENTS);
+  const { userEvents } = useJoin();
+
+  const featured = useMemo(() => {
+    return userEvents.filter(e => {
+      const parts = e.date.split(' ');
+      if (parts.length < 3) return true;
+      const MONTH_MAP: Record<string, number> = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
+        'January': 0, 'February': 1, 'March': 2, 'April': 3, 'June': 5,
+        'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+      };
+      const eventDate = new Date(parseInt(parts[2]), MONTH_MAP[parts[1]] || 0, parseInt(parts[0]));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    }).slice(0, 5);
+  }, [userEvents]);
+
+  const [cards, setCards] = useState(featured);
+
+  // Sync cards when featured events change (e.g., when DB events load)
+  useEffect(() => {
+    setCards(featured);
+  }, [featured]);
 
   const shuffle = () => {
     setCards((prev) => {
@@ -38,15 +46,6 @@ export default function FeaturedStack({ onEventClick, onSeeMore }: FeaturedStack
 
   const handleCardClick = (event: any) => {
     onEventClick(event, false);
-  };
-
-  const handleJoinStateChange = (event: any, isJoined: boolean) => {
-    if (isJoined) {
-      // Small delay to let the animation finish before navigating
-      setTimeout(() => {
-        onEventClick(event, true);
-      }, 300);
-    }
   };
 
   return (
@@ -91,21 +90,15 @@ export default function FeaturedStack({ onEventClick, onSeeMore }: FeaturedStack
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 
                 <div className="absolute bottom-8 left-8 right-8 text-white">
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest mb-1">
-                        By {event.organizer?.name || "CU Student Union"}
-                      </p>
-                      <h3 className="text-2xl font-bold mb-1">{event.title}</h3>
-                      <div className="text-sm font-medium">
-                        <p>{event.date}</p>
-                        <p className="opacity-80">{event.location}</p>
-                      </div>
+                  <div>
+                    <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest mb-1">
+                      By {event.organizer?.name || "CU Student Union"}
+                    </p>
+                    <h3 className="text-2xl font-bold mb-1 line-clamp-2">{event.title}</h3>
+                    <div className="text-sm font-medium min-w-0">
+                      <p>{event.date}</p>
+                      <p className="opacity-80 line-clamp-2">{event.location}</p>
                     </div>
-                    <JoinButton 
-                      id={event.id} 
-                      onStateChange={(isJoined) => handleJoinStateChange(event, isJoined)}
-                    />
                   </div>
                 </div>
 
