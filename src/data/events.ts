@@ -32,7 +32,7 @@ export const ALL_EVENTS = [
     date: '5 April 2026',
     time: '13:00 - 16:00',
     location: '@BACC',
-    image: 'https://images.unsplash.com/photo-1460661419201-fd4cecea8f82?w=600&h=800&fit=crop',
+    image: '/images/craft-event.jpg',
     type: 'art',
     Icon: ArtIcon,
     organizer: {
@@ -201,7 +201,7 @@ export const ALL_EVENTS = [
       email: 'play@gamemaster.com'
     },
     description: 'Play fun board games and meet new guild members! Lots of games to choose from.',
-    image: 'https://images.unsplash.com/photo-1610890733529-6548a391515f?w=600&h=800&fit=crop',
+    image: '/images/boardgame.jpg',
     moodStats: [45, 60, 20, 10, 2],
   },
   {
@@ -219,7 +219,7 @@ export const ALL_EVENTS = [
       email: 'walk@lensculture.com'
     },
     description: 'Explore street photography in Yaowarat. Share storytelling techniques through images.',
-    image: 'https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=600&h=800&fit=crop',
+    image: '/images/craft-event.jpg',
     moodStats: [30, 25, 40, 15, 5],
   },
   {
@@ -327,7 +327,7 @@ export const ALL_EVENTS = [
       email: 'hello@arthub.studio'
     },
     description: 'Introduction to oil painting techniques for beginners.',
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&h=800&fit=crop',
+    image: '/images/craft-event.jpg',
     moodStats: [22, 10, 42, 5, 2],
   },
 ];
