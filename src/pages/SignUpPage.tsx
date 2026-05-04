@@ -67,11 +67,35 @@ export default function SignUpPage({ onSignUp, prefilledEmail = '', onBack }: Si
         const fetchRes = await fetch(compressed);
         const blob = await fetchRes.blob();
         
-        // Upload to Firebase Storage
-        const { uploadImageToStorage } = await import('../lib/firestoreUtils');
-        const userId = 'temp_' + Date.now(); // Temporary ID for signup
-        const path = `profile-images/${userId}_${file.name}`;
-        const downloadURL = await uploadImageToStorage(blob, path);
+        let downloadURL: string | null = null;
+        
+        // Try Firebase Storage first
+        try {
+          const { uploadImageToStorage } = await import('../lib/firestoreUtils');
+          const userId = 'temp_' + Date.now();
+          const path = `profile-images/${userId}_${file.name}`;
+          downloadURL = await uploadImageToStorage(blob, path);
+          console.log('Profile image uploaded to Firebase Storage:', downloadURL);
+        } catch (firebaseErr: any) {
+          console.warn('Firebase upload failed, trying Vercel Blob Storage:', firebaseErr.message);
+          
+          // Fallback to Vercel Blob Storage via /api/upload
+          const formData = new FormData();
+          formData.append('image', blob, file.name);
+          
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          downloadURL = data.url;
+          console.log('Profile image uploaded to Vercel Blob Storage:', downloadURL);
+        }
         
         setProfileImage(downloadURL);
       } catch (err: any) {

@@ -14,6 +14,20 @@ const PORT = 3000;
 
 const isVercel = process.env.VERCEL === '1';
 
+// Try to import Vercel Blob if available
+let vercelBlobAvailable = false;
+let put: any = null;
+try {
+  const { put: vercelPut } = await import('@vercel/blob');
+  put = vercelPut;
+  vercelBlobAvailable = !!process.env.BLOB_READ_WRITE_TOKEN;
+  if (vercelBlobAvailable) {
+    console.log('✓ Vercel Blob Storage is available for image uploads');
+  }
+} catch (e) {
+  console.log('Vercel Blob not available, using fallback storage');
+}
+
 // Ensure upload directory exists - Use /tmp on Vercel as root is read-only
 const uploadDir = isVercel ? "/tmp/images" : path.join(root, "public", "images");
 if (!fs.existsSync(uploadDir)) {
@@ -57,20 +71,38 @@ app.use(express.json());
 app.use('/images', express.static(uploadDir));
 
 // API Route for image upload
-app.post("/api/upload", upload.single("image"), (req, res) => {
+app.post("/api/upload", upload.single("image"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file uploaded" });
   }
   
-  if (isVercel) {
-    // On Vercel, we can't easily serve the memory-stored file later without real storage
-    // But for "fixing the deploy" we'll return a data URL or just the path and hope for the best
-    // Ideally user should use Firebase Storage.
-    const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    res.json({ url: base64 });
-  } else {
-    const publicPath = `/images/${req.file.filename}`;
-    res.json({ url: publicPath });
+  try {
+    // Try Vercel Blob first if available
+    if (vercelBlobAvailable && put) {
+      console.log('Uploading to Vercel Blob Storage:', req.file.originalname);
+      const timestamp = Date.now();
+      const filename = `images/${timestamp}_${req.file.originalname}`;
+      const blob = await put(filename, req.file.buffer, {
+        access: 'public',
+        contentType: req.file.mimetype,
+      });
+      console.log('✓ Upload successful:', blob.url);
+      return res.json({ url: blob.url });
+    }
+    
+    // Fallback for local development
+    if (isVercel) {
+      // On Vercel without Blob, return base64
+      const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      res.json({ url: base64 });
+    } else {
+      // Local development - save to disk
+      const publicPath = `/images/${req.file.filename}`;
+      res.json({ url: publicPath });
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed', details: String(error) });
   }
 });
 
