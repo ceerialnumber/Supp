@@ -55,7 +55,17 @@ export async function uploadImageToStorage(file: File | Blob, path: string): Pro
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
-  } catch (error) {
+  } catch (error: any) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    // Check for CORS errors indicating Firebase Storage not initialized
+    if (errorMsg.includes('CORS') || errorMsg.includes('Storage has not been set up')) {
+      const corsError = new Error(
+        'Firebase Storage not configured. Images can be added later. ' +
+        'To fix: Go to https://console.firebase.google.com/project/gen-lang-client-0705501801/storage and click "Get Started"'
+      );
+      console.warn('Storage Upload Warning:', corsError.message);
+      throw corsError;
+    }
     handleFirestoreError(error, OperationType.UPLOAD, path);
     throw error;
   }
