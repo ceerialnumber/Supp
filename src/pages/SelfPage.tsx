@@ -6,6 +6,7 @@ import MoodTracker from '../components/mood/MoodTracker';
 import { useJoin } from '../context/JoinContext';
 import { MOODS } from '../components/mood/MoodPicker';
 import { TYPOGRAPHY } from '../styles/typography';
+import { getProfileImage } from '../lib/localStorage';
 
 interface SelfPageProps {
   onEventClick: (event: any) => void;
@@ -23,6 +24,11 @@ interface SelfPageProps {
 
 export default function SelfPage({ onEventClick, userData, onMoodHistoryClick, onSnapshotsClick, onEdit }: SelfPageProps) {
   const { getOrganizerMoodStats } = useJoin();
+  
+  // Get profile image from localStorage first, then fall back to userData or default
+  const profileImageUrl = userData?.name 
+    ? (getProfileImage(userData.name) || userData?.profileImage || "/images/User.jpg")
+    : "/images/User.jpg";
   
   const stats = getOrganizerMoodStats(userData?.email || '');
   const total = stats.reduce((a, b) => a + b, 0);
@@ -49,7 +55,7 @@ export default function SelfPage({ onEventClick, userData, onMoodHistoryClick, o
           <div className="relative group">
             <div className="w-60 h-60 rounded-[60px] overflow-hidden shadow-l mb-4 bg-gray-100 border-4 border-white">
               <img
-                src={userData?.profileImage || "/images/User.jpg"}
+                src={profileImageUrl}
                 alt="Profile"
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"

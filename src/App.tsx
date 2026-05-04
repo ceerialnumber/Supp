@@ -25,6 +25,7 @@ import { auth, db, googleProvider } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, query, where, collection, getDocs, limit } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from './lib/firestoreUtils';
+import { getProfileImage, saveProfileImage, getStoredProfileImages } from './lib/localStorage';
 
 export default function App() {
   return (
@@ -445,6 +446,24 @@ function AppContent() {
                         });
 
                         await setDoc(userRef, dataToSave);
+                        
+                        // Handle profile image - migrate from temp storage if exists
+                        const storedImages = getStoredProfileImages();
+                        const tempImageKey = Object.keys(storedImages).find(key => key.startsWith('temp_'));
+                        if (tempImageKey && storedImages[tempImageKey]) {
+                          const tempImage = storedImages[tempImageKey];
+                          // Delete temp image
+                          const updatedImages = { ...storedImages };
+                          delete updatedImages[tempImageKey];
+                          localStorage.setItem('app_profile_images', JSON.stringify(updatedImages));
+                          
+                          // Save with real UID
+                          localStorage.setItem('app_profile_images', JSON.stringify({
+                            ...updatedImages,
+                            [uid]: tempImage
+                          }));
+                          console.log('✓ Profile image migrated to real user ID:', uid);
+                        }
                         
                         console.log('Signup completed successfully');
                         

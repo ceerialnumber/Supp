@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { User, Phone, Mail, Camera, ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Loader2 } from 'lucide-react';
 import { TYPOGRAPHY } from '../styles/typography';
 import { compressImage } from '../lib/imageUtils';
+import { saveProfileImage } from '../lib/localStorage';
 
 interface SignUpPageProps {
   onSignUp: (userData: { 
@@ -60,49 +61,22 @@ export default function SignUpPage({ onSignUp, prefilledEmail = '', onBack }: Si
           reader.readAsDataURL(file);
         });
 
-        // Compress image before upload
+        // Compress image before storage
         const compressed = await compressImage(base64, 400, 400, 0.7);
         
         // Convert base64 to Blob
         const fetchRes = await fetch(compressed);
         const blob = await fetchRes.blob();
         
-        let downloadURL: string | null = null;
+        // Store in localStorage linked to temporary user ID (will be linked to real UID after signup)
+        const tempUserId = 'temp_' + Date.now();
+        const imageDataUrl = await saveProfileImage(tempUserId, blob, file.name);
         
-        // Try Firebase Storage first
-        try {
-          const { uploadImageToStorage } = await import('../lib/firestoreUtils');
-          const userId = 'temp_' + Date.now();
-          const path = `profile-images/${userId}_${file.name}`;
-          downloadURL = await uploadImageToStorage(blob, path);
-          console.log('Profile image uploaded to Firebase Storage:', downloadURL);
-        } catch (firebaseErr: any) {
-          console.warn('Firebase upload failed, trying Vercel Blob Storage:', firebaseErr.message);
-          
-          // Fallback to Vercel Blob Storage via /api/upload
-          const formData = new FormData();
-          formData.append('image', blob, file.name);
-          
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Upload failed: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          downloadURL = data.url;
-          console.log('Profile image uploaded to Vercel Blob Storage:', downloadURL);
-        }
-        
-        setProfileImage(downloadURL);
+        setProfileImage(imageDataUrl);
+        console.log('✓ Profile image saved locally for temp user:', tempUserId);
       } catch (err: any) {
         console.error("Upload error:", err);
-        // Don't fail signup if image upload fails - just warn the user
-        setError("Note: Profile image upload failed, but you can add it later.");
-        // Still allow signup to continue by setting profileImage to null
+        setError("Failed to upload image. Please try again.");
         setProfileImage(null);
       } finally {
         setIsUploading(false);

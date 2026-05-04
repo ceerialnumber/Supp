@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { User, Phone, Mail, Camera, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { TYPOGRAPHY } from '../styles/typography';
 import { compressImage } from '../lib/imageUtils';
+import { saveProfileImage, getProfileImage } from '../lib/localStorage';
 
 interface EditProfilePageProps {
   userData: {
@@ -23,7 +24,13 @@ export default function EditProfilePage({ userData, onSave, onBack }: EditProfil
     email: userData?.email || '',
     phone: userData?.phone || '',
   });
-  const [profileImage, setProfileImage] = useState<string | null>(userData?.profileImage || null);
+  
+  // Initialize profile image from localStorage or userData
+  const [profileImage, setProfileImage] = useState<string | null>(() => {
+    const userId = userData?.name || '';
+    return getProfileImage(userId) || userData?.profileImage || null;
+  });
+  
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,44 +45,19 @@ export default function EditProfilePage({ userData, onSave, onBack }: EditProfil
           reader.readAsDataURL(file);
         });
 
-        // Compress image before upload
+        // Compress image before storage
         const compressed = await compressImage(base64, 400, 400, 0.7);
         
         // Convert base64 to Blob
         const fetchRes = await fetch(compressed);
         const blob = await fetchRes.blob();
         
-        let downloadURL: string | null = null;
-
-        // Try Firebase Storage first
-        try {
-          const { uploadImageToStorage } = await import('../lib/firestoreUtils');
-          const userId = userData?.name || 'unknown';
-          const path = `profile-images/${userId}_${Date.now()}_${file.name}`;
-          downloadURL = await uploadImageToStorage(blob, path);
-          console.log('Profile image uploaded to Firebase Storage:', downloadURL);
-        } catch (firebaseErr: any) {
-          console.warn('Firebase upload failed, trying Vercel Blob Storage:', firebaseErr.message);
-          
-          // Fallback to Vercel Blob Storage via /api/upload
-          const formData = new FormData();
-          formData.append('image', blob, file.name);
-          
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Upload failed: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          downloadURL = data.url;
-          console.log('Profile image uploaded to Vercel Blob Storage:', downloadURL);
-        }
+        // Store in localStorage linked to user ID
+        const userId = userData?.name || 'unknown';
+        const imageDataUrl = await saveProfileImage(userId, blob, file.name);
         
-        setProfileImage(downloadURL);
+        setProfileImage(imageDataUrl);
+        console.log('✓ Profile image saved locally for user:', userId);
       } catch (err: any) {
         console.error("Upload error:", err);
         alert("Failed to upload image. Please try again.");
