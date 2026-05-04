@@ -32,7 +32,7 @@ export const ALL_EVENTS = [
     date: '5 April 2026',
     time: '13:00 - 16:00',
     location: '@BACC',
-    image: '/images/craft-event.jpg',
+    image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=600&h=800&fit=crop',
     type: 'art',
     Icon: ArtIcon,
     organizer: {
@@ -201,7 +201,7 @@ export const ALL_EVENTS = [
       email: 'play@gamemaster.com'
     },
     description: 'Play fun board games and meet new guild members! Lots of games to choose from.',
-    image: '/images/boardgame.jpg',
+    image: 'https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=600&h=800&fit=crop',
     moodStats: [45, 60, 20, 10, 2],
   },
   {
@@ -219,7 +219,7 @@ export const ALL_EVENTS = [
       email: 'walk@lensculture.com'
     },
     description: 'Explore street photography in Yaowarat. Share storytelling techniques through images.',
-    image: '/images/craft-event.jpg',
+    image: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=600&h=800&fit=crop',
     moodStats: [30, 25, 40, 15, 5],
   },
   {
@@ -311,23 +311,5 @@ export const ALL_EVENTS = [
     description: 'Push your limits as the sun goes down over the Bangkok skyline.',
     image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&h=800&fit=crop',
     moodStats: [32, 68, 15, 25, 4],
-  },
-  {
-    id: 'past-6',
-    title: 'Oil Painting Basics',
-    type: 'art',
-    typeLabel: 'Art',
-    Icon: ArtIcon,
-    date: '25 March 2027',
-    time: '13:00 - 17:00',
-    location: '@BACC',
-    organizer: {
-      name: 'Art Hub Studio',
-      image: 'https://images.unsplash.com/photo-1460661419201-fd4cecea8f82?w=100&h=100&fit=crop',
-      email: 'hello@arthub.studio'
-    },
-    description: 'Introduction to oil painting techniques for beginners.',
-    image: '/images/craft-event.jpg',
-    moodStats: [22, 10, 42, 5, 2],
   },
 ];
