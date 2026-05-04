@@ -15,7 +15,7 @@ export const ALL_EVENTS = [
     date: '1 April 2026',
     time: '17:00 - 20:00',
     location: '@Lumpini park',
-    image: '/images/park-concert.jpg',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=800&fit=crop',
     type: 'outdoor',
     Icon: OutdoorIcon,
     organizer: {
@@ -32,7 +32,7 @@ export const ALL_EVENTS = [
     date: '5 April 2026',
     time: '13:00 - 16:00',
     location: '@BACC',
-    image: '/images/craft-event.jpg',
+    image: 'https://images.unsplash.com/photo-1460661419201-fd4cecea8f82?w=600&h=800&fit=crop',
     type: 'art',
     Icon: ArtIcon,
     organizer: {
@@ -49,7 +49,7 @@ export const ALL_EVENTS = [
     date: '8 April 2026',
     time: '07:00 - 09:00',
     location: '@Fitness First',
-    image: '/images/pilates-event.jpg',
+    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=800&fit=crop',
     type: 'workout',
     Icon: WorkoutIcon,
     organizer: {
@@ -75,7 +75,7 @@ export const ALL_EVENTS = [
       email: 'events@saladaeng.com'
     },
     description: 'Find someone to enjoy with me through this special event that have many great indy artist that especially perform onece in a while in thailand with cozy ambient',
-    image: '/images/Outdoor-concert.jpg',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=800&fit=crop',
     moodStats: [25, 15, 40, 8, 2],
   },
   {
@@ -93,7 +93,7 @@ export const ALL_EVENTS = [
       email: 'join@runnerclub.bkk'
     },
     description: 'Find someone to walk, run and talk through Benjakitti Park. Hope we have fun',
-    image: '/images/run-event.jpg',
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=800&fit=crop',
     moodStats: [12, 55, 10, 15, 3],
   },
   {
@@ -111,7 +111,7 @@ export const ALL_EVENTS = [
       email: 'techhouse@cu.ac.th'
     },
     description: 'A seminar on new technologies and innovations by famous speakers, along with presentations from computer science students.',
-    image: '/images/conference.jpg',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop',
     moodStats: [8, 12, 10, 25, 5],
   },
   {
@@ -129,7 +129,7 @@ export const ALL_EVENTS = [
       email: 'maya@nightlife.com'
     },
     description: 'Finding girl friends to go to bars and enjoy the night together!',
-    image: '/images/Girls-night.jpg',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=800&fit=crop',
     moodStats: [65, 35, 12, 5, 1],
   },
   {
@@ -201,7 +201,7 @@ export const ALL_EVENTS = [
       email: 'play@gamemaster.com'
     },
     description: 'Play fun board games and meet new guild members! Lots of games to choose from.',
-    image: '/images/boardgame.jpg',
+    image: 'https://images.unsplash.com/photo-1610890733529-6548a391515f?w=600&h=800&fit=crop',
     moodStats: [45, 60, 20, 10, 2],
   },
   {
