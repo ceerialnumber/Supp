@@ -131,14 +131,14 @@ function AppContent() {
     
       try {
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        const updateData: any = { ...newUserData, updatedAt: new Date().toISOString() };
-        // Remove any undefined values
-        Object.keys(updateData).forEach(key => {
-          if (updateData[key] === undefined) {
-            delete updateData[key];
+        // Remove undefined fields
+        const dataToSave: any = { ...newUserData, updatedAt: new Date().toISOString() };
+        Object.keys(dataToSave).forEach(key => {
+          if (dataToSave[key] === undefined) {
+            dataToSave[key] = null;
           }
         });
-        await setDoc(userRef, updateData, { merge: true });
+        await setDoc(userRef, dataToSave, { merge: true });
         setUserData(newUserData);
         setIsEditingProfile(false);
       } catch (error) {
@@ -429,26 +429,22 @@ function AppContent() {
                         };
                         delete (cleanData as any).password; 
                         delete (cleanData as any).confirmPassword;
-                        // Only include profileImage if it exists
-                        if (!cleanData.profileImage) {
-                          delete (cleanData as any).profileImage;
-                        }
 
-                        const docData: any = {
+                        // Remove undefined fields (Firestore doesn't allow undefined values)
+                        const dataToSave: any = {
                           ...cleanData,
                           uid: uid,
                           registeredAt: new Date().toISOString()
                         };
                         
-                        // Remove any undefined values
-                        Object.keys(docData).forEach(key => {
-                          if (docData[key] === undefined) {
-                            delete docData[key];
+                        // Set undefined fields to null or remove them
+                        Object.keys(dataToSave).forEach(key => {
+                          if (dataToSave[key] === undefined) {
+                            dataToSave[key] = null;
                           }
                         });
 
-                        console.log('Document data to save:', docData);
-                        await setDoc(userRef, docData);
+                        await setDoc(userRef, dataToSave);
                         
                         console.log('Signup completed successfully');
                         

@@ -76,7 +76,10 @@ export default function SignUpPage({ onSignUp, prefilledEmail = '', onBack }: Si
         setProfileImage(downloadURL);
       } catch (err: any) {
         console.error("Upload error:", err);
-        setError("Failed to upload image. Please try again.");
+        // Don't fail signup if image upload fails - just warn the user
+        setError("Note: Profile image upload failed, but you can add it later.");
+        // Still allow signup to continue by setting profileImage to null
+        setProfileImage(null);
       } finally {
         setIsUploading(false);
       }

@@ -47,7 +47,7 @@ export default function EditProfilePage({ userData, onSave, onBack }: EditProfil
         
         // Upload to Firebase Storage
         const { uploadImageToStorage } = await import('../lib/firestoreUtils');
-        const userId = userData?.name || 'unknown'; // Use user identifier
+        const userId = userData?.name || 'unknown';
         const path = `profile-images/${userId}_${Date.now()}_${file.name}`;
         const downloadURL = await uploadImageToStorage(blob, path);
         
