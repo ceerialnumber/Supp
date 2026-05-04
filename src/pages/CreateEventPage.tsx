@@ -25,18 +25,19 @@ import {
 } from '../components/events/EventType';
 import LocationPickerMap from '../components/events/LocationPickerMap';
 import { compressImage } from '../lib/imageUtils';
-import { saveEventImage } from '../lib/localStorage';
+import { saveEventImage, getEventImage } from '../lib/localStorage';
+import { getProfileImage } from '../lib/localStorage';
 
 import { TYPOGRAPHY } from '../styles/typography';
 
 const TYPES = [
-  { id: 'party', label: 'Party', Icon: PartyIcon },
-  { id: 'workout', label: 'Workout', Icon: WorkoutIcon },
-  { id: 'art', label: 'Art', Icon: ArtIcon },
-  { id: 'outdoor', label: 'Outdoor', Icon: OutdoorIcon },
-  { id: 'film', label: 'Film', Icon: FilmIcon },
-  { id: 'music', label: 'Music', Icon: MusicIcon },
-  { id: 'learning', label: 'Learning', Icon: LearningIcon },
+  { id: 'party', label: 'Party', Icon: PartyIcon, defaultImage: '/images/Girls-night.jpg' },
+  { id: 'workout', label: 'Workout', Icon: WorkoutIcon, defaultImage: '/images/run-event.jpg' },
+  { id: 'art', label: 'Art', Icon: ArtIcon, defaultImage: '/images/craft-event.jpg' },
+  { id: 'outdoor', label: 'Outdoor', Icon: OutdoorIcon, defaultImage: '/images/Outdoor-concert.jpg' },
+  { id: 'film', label: 'Film', Icon: FilmIcon, defaultImage: '/images/conference.jpg' },
+  { id: 'music', label: 'Music', Icon: MusicIcon, defaultImage: '/images/park-concert.jpg' },
+  { id: 'learning', label: 'Learning', Icon: LearningIcon, defaultImage: '/images/boardgame.jpg' },
 ];
 
 interface CreateEventPageProps {
@@ -124,6 +125,12 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
     }
 
     const typeData = TYPES.find(t => t.id === selectedType);
+    
+    // Get organizer profile image from localStorage (user's profile picture)
+    const organizerProfileImage = userData?.name 
+      ? (getProfileImage(userData.name) || userData?.profileImage || "/images/User.jpg")
+      : "/images/User.jpg";
+    
     const newEvent = {
       id: Date.now().toString(),
       title,
@@ -133,11 +140,11 @@ export default function CreateEventPage({ onSubmit, userData }: CreateEventPageP
       type: selectedType,
       typeLabel: typeData?.label,
       Icon: typeData?.Icon,
-      image: uploadedImage || '/images/party.jpg',
+      image: uploadedImage || typeData?.defaultImage || '/images/party.jpg',
       description: description.trim() || `A ${selectedType} event newly created! Excited to see everyone there.`,
       organizer: {
         name: userData?.name || "Personal Organizer",
-        image: userData?.profileImage || "/images/User.jpg",
+        image: organizerProfileImage,
         email: userData?.email || "",
         username: userData?.username || ""
       }

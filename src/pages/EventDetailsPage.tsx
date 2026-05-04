@@ -8,6 +8,7 @@ import EventCountdownCard from '../components/events/EventCountdownCard';
 import { useJoin } from '../context/JoinContext';
 import { isUpcoming, getEventDate } from '../lib/dateUtils';
 import { getEventIcon } from '../lib/eventUtils';
+import { getProfileImage } from '../lib/localStorage';
 import { TYPOGRAPHY } from '../styles/typography';
 
 interface EventDetailsPageProps {
@@ -52,7 +53,9 @@ export default function EventDetailsPage({ event, onBack, userData, isUserEvent,
   const organizer = isUserEvent 
     ? {
         name: userData?.name || "Me",
-        image: userData?.profileImage || "/images/User.jpg",
+        image: userData?.name 
+          ? (getProfileImage(userData.name) || userData?.profileImage || "/images/User.jpg")
+          : "/images/User.jpg",
         email: userData?.email || "",
         username: userData?.username || ""
       }
